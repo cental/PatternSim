@@ -9,8 +9,8 @@ patternsim.pl
 patternsim-rank 
 ---------------
 
-Reranking semantic similarity scores between words extracted with the patternsim.pl. 
-
+Reranking semantic similarity scores between words extracted with the patternsim.pl. Directory -- "rank".
+ 
 **Synopsis**
 
 patternsim-rank [*options*]
