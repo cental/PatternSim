@@ -11,8 +11,10 @@ http://www.oegai.at/konvens2012/proceedings/23_panchenko12p/
 - Related repositories: 
 	- Source code of the demo system: https://github.com/PomanoB/lsse
 	- An evaluation framework for semantic similarity measures: https://github.com/alexanderpanchenko/sim-eval
+
 License 
 -------
+
 LGPLv3: http://www.gnu.de/documents/lgpl-3.0.en.html
 
 patternsim
