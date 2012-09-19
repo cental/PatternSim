@@ -20,8 +20,51 @@ A tool for extraction of raw extraction counts with lexico-syntactic patterns.
 4. "sudo cpan Moose"
 5. Install Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/zips/Unitex3.0beta.zip)
 
+** Synopsis**
+patternsim [options] [corpus_file(s) ...]
 
-**Use**
+**Options**
+
+Usage:
+    patternsim [options] [corpus_file(s) ...]
+
+      Options:
+        --vocabulary (-v)        input vocabulary file
+        --output (-o)            output directory
+        --unitex                 Unitex main directory
+
+        --verbose                verbose mode
+        --help                   brief help message
+        --man                    full documentation
+
+Options:
+    --vocabulary --vocab -v *vocabulary_file*
+            Specify the UTF-8 input vocabulary file (one word per line)
+
+    --unitex *unitex_main_directory*
+            Specify the Unitex main directory if you want to use your own
+            Unitex installation (overwite the patternsim configuration file)
+
+            At first run, patternsim will ask you if you want to install the
+            Unitex program automatically or if you want to specify the
+            location of your Unitex main directory.
+
+    --output -o *output_directory*
+            Specify the output directory
+
+    --verbose
+            Explains what is being done
+
+    --help -h
+            Prints a brief help message and exits.
+
+    --man   Prints the manual page and exits.
+
+    --verbose
+            Activates the verbose mode. Explains all the processes. Outputs
+            will be shown on stderr
+
+**Example**
 Example:
 ./patternsim --unitex /home/sasha/Unitex3.0beta -v vocabulary.txt -o ./output corpus.txt
 
