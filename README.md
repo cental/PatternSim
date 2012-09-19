@@ -27,6 +27,7 @@ A tool for extraction of raw extraction counts with lexico-syntactic patterns.
 5. Install Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/zips/Unitex3.0beta.zip)
 
 ** Synopsis**
+
 patternsim [options] [corpus_file(s) ...]
 
 **Options**
