@@ -26,7 +26,7 @@ A tool for extraction of raw extraction counts with lexico-syntactic patterns.
 4. "sudo cpan Moose"
 5. Install Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/zips/Unitex3.0beta.zip)
 
-** Synopsis**
+**Synopsis**
 
 patternsim [options] [corpus_file(s) ...]
 
