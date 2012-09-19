@@ -1,0 +1,606 @@
+#! /usr/bin/env perl
+#======================================================================
+#    NAME: patternsim
+#======================================================================
+#  AUTHOR: Hubert Naets <hubert.naets@uclouvain.be>
+#    DATE: 2012-08-23
+# VERSION: 0.1
+#======================================================================
+# USAGE: perl ./pattersim
+#======================================================================
+use strict;
+use warnings;
+use utf8;
+
+use Getopt::Long;
+use Params::Check;  #TODO: remplacer la validation des paramètres par ce module
+use Config::General;
+use Pod::Usage;
+use File::HomeDir;
+use File::Temp;
+use IPC::Run3;
+use File::Spec::Functions qw(rel2abs);
+use File::Basename qw(dirname);
+use Encode;
+
+use Data::Dumper;
+# local $Data::Dumper::Pair     = ':';
+# local $Data::Dumper::Sortkeys = 1;
+# local $Data::Dumper::Indent   = 1;
+# local $Data::Dumper::Purity   = 0;
+# local $Data::Dumper::Pad      = '  |';
+# local $Data::Dumper::Terse    = 1;
+
+# Log facility
+use Log::Message::Simple qw[msg error debug carp croak cluck confess];
+local $Log::Message::Simple::DEBUG_FH = \*STDERR;
+
+use Lingua::Unitex;
+
+my $verbose = 0;
+my $debug   = 0;
+my $error   = 1;
+
+#----------------------------------------------------------------------
+# OS detection
+# (useful to known the unitex exe to use)
+#----------------------------------------------------------------------
+my %os = (
+    MacOS   => 'Unix',
+    MSWin32 => 'Win',
+);
+my $os = $os{$^O} || 'Unix';
+
+#----------------------------------------------------------------------
+# Script directory
+#----------------------------------------------------------------------
+my $script_path = rel2abs($0);
+my $script_dir  = dirname($script_path) . '/';
+
+#----------------------------------------------------------------------
+# args
+#----------------------------------------------------------------------
+my $opts   = {};
+my $result = GetOptions(
+    'vocabulary|vocab|v=s'  => \$opts->{vocabulary},
+    'output-dir|output|o=s' => \$opts->{output_dir},
+    'unitex=s'              => \$opts->{unitex_dir},
+    'debug'                 => \$opts->{debug},
+    'verbose'               => \$opts->{verbose},
+    'help|h'                => \$opts->{help},
+    'man'                   => \$opts->{man},
+);
+
+$opts->{corpora} = [@ARGV];
+
+$debug   = 1 if $opts->{debug}   and $opts->{debug} == 1;
+$verbose = 1 if $opts->{verbose} and $opts->{verbose} == 1;
+
+debug( "Program arguments are:\n" . Dumper($opts), $debug );
+
+#----------------------------------------------------------------------
+# help or man page
+#----------------------------------------------------------------------
+pod2usage(2) if ( $opts->{help} );
+pod2usage(1) if ( $opts->{man} );
+if ( not $opts->{vocabulary} or not $opts->{output_dir} ) {
+    print "\nMissing argument\n";
+    pod2usage(2);
+}
+
+#----------------------------------------------------------------------
+# args validation
+#----------------------------------------------------------------------
+exit(1) if not _are_valid_opts($opts);
+
+#----------------------------------------------------------------------
+# unitex validation
+#----------------------------------------------------------------------
+exit(2)
+  if defined $opts->{unitex_dir}
+      and not _is_valid_unitex_installation( $opts->{unitex_dir} );
+
+#----------------------------------------------------------------------
+# first usage: config file
+# the config file must include unitex dir
+#----------------------------------------------------------------------
+my $data_dir       = File::HomeDir->my_data;           # determine data user dir
+my $patternsim_dir = $data_dir . '/' . 'patternsim';
+if ( not -e $patternsim_dir ) {
+    mkdir $patternsim_dir;
+    debug( "Directory '$patternsim_dir' created", $debug );
+    msg( "Directory '$patternsim_dir' created", $verbose );
+}
+
+my $patternsimrc = "$patternsim_dir/patternsimrc";
+if ( not -e $patternsimrc ) {
+
+    my $config_data = {
+        'unitex'  => { unitex_dir => undef, user_dir => undef },
+        'corpora' => {
+            split_at_size => 52428800,
+            temp_dir      => "$patternsim_dir/corpus_temp"
+        }
+    };
+    my $config = Config::General->new($config_data);
+    $config->save_file($patternsimrc);
+
+    debug( "File '$patternsimrc' created", $debug );
+    msg( "File '$patternsimrc' created", $verbose );
+
+}
+
+my $config = Config::General->new( $patternsim_dir . '/patternsimrc' );
+my %config = $config->getall();
+
+#----------------------------------------------------------------------
+# first usage: download and compile Unitex if needed
+#----------------------------------------------------------------------
+# TODO
+
+
+my $unitex = Lingua::Unitex->new(
+    language    => 'English',
+    unitex_dir  => $opts->{unitex_dir},
+    verbose_log => $verbose,
+    debug_log   => $debug,
+    error_log   => $error,
+);
+
+#----------------------------------------------------------------------
+# Split corpus files in files of $config{corpora}->{split_at_size} size
+# to avoid Unitex RAM overusage
+#----------------------------------------------------------------------
+my @splited_files = ();
+
+mkdir $config{corpora}->{temp_dir};
+
+my $pattern = 'corpus_XXXXXXXXXXXXXXXX';
+my $suffix  = '_utf16le.txt';
+
+my $size = 0;
+my $fh_corpus;
+my $filename_corpus;
+( $fh_corpus, $filename_corpus ) = File::Temp::tempfile(
+    $pattern,
+    DIR    => $config{corpora}->{temp_dir},
+    SUFFIX => $suffix
+);
+binmode $fh_corpus, ':encoding(utf16le)';
+print $fh_corpus "\x{feff}";
+
+while ( my $line = <> ) {
+    my $content = Encode::decode( 'utf8', $line );
+    $size += length($line);
+    if ( $size > $config{corpora}->{split_at_size} ) {
+        push @splited_files, $filename_corpus;
+        close $fh_corpus;
+        $size = 0;
+        ( $fh_corpus, $filename_corpus ) = File::Temp::tempfile(
+            $pattern,
+            DIR    => $config{corpora}->{temp_dir},
+            SUFFIX => $suffix
+        );
+        binmode $fh_corpus, ':encoding(utf16le)';
+        print $fh_corpus "\x{feff}";
+        print $fh_corpus $content;
+    }
+    else {
+        print $fh_corpus $content;
+    }
+}
+push @splited_files, $filename_corpus;
+close $fh_corpus;
+
+
+#----------------------------------------------------------------------
+# Load vocabulary file
+#----------------------------------------------------------------------
+my $vocabulary_fh = IO::File->new($opts->{vocabulary}, 'r');
+binmode $vocabulary_fh, ':encoding(utf8)';
+my %vocabulary = map {$_ =~ s/\s+$//; lc($_) => 1} <$vocabulary_fh>;
+$vocabulary_fh->close();
+
+#----------------------------------------------------------------------
+# Prepare relations extraction
+#----------------------------------------------------------------------
+my @concord = ();     # concordances
+my $dico    = Lingua::Unitex::Dela->new();  # corpus dictionary
+
+my $corpus_words_freq = {}; # word frequencies in the corpus
+my $conc_words_freq   = {}; # word frequencies in the concordances
+
+my $relations    = {}; # token relations
+my $relations_np = {}; # noun phrases relations 
+
+#----------------------------------------------------------------------
+# Preprocess Corpus with Unitex Tools
+#----------------------------------------------------------------------
+foreach my $file (@splited_files) {
+    my $unicorpus = $unitex->corpus( 'filename' => $file );
+    $unicorpus->normalize;
+    $unicorpus->apply_graph_in_merge_mode;
+    $unicorpus->apply_graph_in_replace_mode;
+    $unicorpus->tokenize;
+    $unicorpus->apply_lexical_ressources;
+    $unicorpus->apply_graph( $script_dir
+          . 'share/Resources/English/Graphs/hypernymy/hypernym_main.grf' );
+         
+    $dico->merge_with($unicorpus->get_dictionary());
+    push @concord, $unicorpus->get_last_concord();
+    my $tokens_by_freq = $unicorpus->get_tokens_by_frequency();
+    
+    foreach my $tok (keys %$tokens_by_freq) {
+        $corpus_words_freq->{$tok}+= $tokens_by_freq->{$tok};
+    }
+    $unicorpus->delete_all_files();
+}
+    
+    #----------------------------------------------------------------------
+    # Extract relations
+    #----------------------------------------------------------------------
+foreach my $conc (@concord) {
+    
+      #----------------------------------------------------------------------
+      # get tokens in [...]
+      #----------------------------------------------------------------------
+      $conc = lc $conc;
+      (my $rule) = $conc =~ /\[pattern=(\d+)\]/;
+      my @tokens = $conc =~ /\[(.+?)\]=/g;
+      map {$_ =~ s/^\s+//; $_ =~ s/\s+$// } @tokens;
+      
+      #----------------------------------------------------------------------
+      # lemmatize tokens
+      #----------------------------------------------------------------------
+      my @lemmas = _lemmatize($dico,$corpus_words_freq,@tokens);
+
+      #----------------------------------------------------------------------
+      # record relation and rule number
+      #----------------------------------------------------------------------
+      while (@lemmas > 1) {
+        my $vedette = shift @lemmas;
+        foreach my $lemma (@lemmas) {
+          $relations->{$vedette}->{$lemma}->{$rule}++;
+          $relations->{$lemma}->{$vedette}->{$rule}++;
+        }
+      }
+      
+      #----------------------------------------------------------------------
+      # get noun phrases in {...}
+      #----------------------------------------------------------------------
+      my @np = $conc =~ /\{(.+?)=\pL+\}/g;
+      map {$_ =~ s/[[\]]//g ;$_ =~ s/^\s+//; $_ =~ s/\s+$// } @np;
+      
+      #----------------------------------------------------------------------
+      # record np relation and rule number
+      #----------------------------------------------------------------------
+      while (@np > 1) {
+        my $vedette = shift @np;
+        foreach my $token (@np) {
+          $relations_np->{$vedette}->{$token}->{$rule}++;
+          $relations_np->{$token}->{$vedette}->{$rule}++;
+        }
+      }
+}
+
+#----------------------------------------------------------------------
+# Save results
+#----------------------------------------------------------------------
+mkdir $opts->{output_dir}; # create output dir
+
+#----------------------------------------------------------------------
+# save pairs and pairs voc
+#----------------------------------------------------------------------
+my $pairs_fh     = IO::File->new($opts->{output_dir} . '/' . 'pairs.csv' , 'w');
+my $pairs_voc_fh = IO::File->new($opts->{output_dir} . '/' . 'pairs-voc.csv' , 'w');
+binmode($pairs_fh,    ':encoding(utf8)');
+binmode($pairs_voc_fh,':encoding(utf8)');
+
+foreach my $vedette ( sort keys %$relations) {
+  foreach my $related (sort keys %{$relations->{$vedette}}) {
+    
+    my $extractions = 0;
+    my @rules = (0) x (17 + 1); # initalize tab @rules with 18 elements at '0'
+    foreach my $rule (keys %{$relations->{$vedette}->{$related}}) {
+      $rules[$rule] = $relations->{$vedette}->{$related}->{$rule};
+      $extractions += $relations->{$vedette}->{$related}->{$rule};
+    }
+     shift @rules; # remove column 0;
+     print $pairs_fh $vedette, ';', $related . ';', $extractions, ';', join(";",@rules), "\n";
+     print $pairs_voc_fh $vedette, ';', $related . ';', $extractions, ';', join(";",@rules), "\n" if exists $vocabulary{$vedette} and exists $vocabulary{$related};
+     
+  }
+}
+$pairs_fh->close;
+$pairs_voc_fh->close;
+
+#----------------------------------------------------------------------
+# save pairs np
+#----------------------------------------------------------------------
+my $pairs_np_fh = IO::File->new($opts->{output_dir} . '/' . 'pairs-np.csv' , 'w');
+binmode $pairs_np_fh, ':encoding(utf8)';
+
+foreach my $vedette ( sort keys %$relations_np) {
+  foreach my $related (sort keys %{$relations_np->{$vedette}}) {
+    my $extractions = 0;
+    my @rules = (0) x (17 + 1); # initalize tab @rules with 18 elements at '0'
+    foreach my $rule (keys %{$relations_np->{$vedette}->{$related}}) {
+      $rules[$rule] = $relations_np->{$vedette}->{$related}->{$rule};
+      $extractions += $relations_np->{$vedette}->{$related}->{$rule};
+    }
+    shift @rules; # remove column 0;
+    print $pairs_np_fh $vedette, ';', $related . ';', $extractions, ';', join(";",@rules), "\n";
+  }
+}
+$pairs_np_fh->close;
+
+#----------------------------------------------------------------------
+#save lemma frequency
+#----------------------------------------------------------------------
+my $corpus_lemma_freq = {};
+foreach my $form (keys %$corpus_words_freq) {
+   my $lemma = _lemmatize($dico,$corpus_words_freq,$form);
+   $corpus_lemma_freq->{$lemma} += $corpus_words_freq->{$form};
+}
+my $corpus_freq_fh = IO::File->new($opts->{output_dir} . '/' . 'corpus-freq.csv' , 'w');
+binmode $corpus_freq_fh, ':encoding(utf8)';
+
+foreach my $lemma (sort {$corpus_lemma_freq->{$b} <=> $corpus_lemma_freq->{$a} } keys %$corpus_lemma_freq) {
+  print $corpus_freq_fh $lemma, ';', $corpus_lemma_freq->{$lemma}, "\n";
+}
+
+$corpus_freq_fh->close;
+
+#----------------------------------------------------------------------
+# save lemma concordances frequency
+#----------------------------------------------------------------------
+
+my $pattern_concord = 'concord_XXXXXXXXXXXXXXXX';
+my $suffix_concord  = '_utf16le.txt';
+my $fh_concord;
+my $filename_concord;
+( $fh_concord, $filename_concord ) = File::Temp::tempfile(
+    $pattern_concord,
+    DIR    => $config{corpora}->{temp_dir},
+    SUFFIX => $suffix_concord
+);
+binmode $fh_concord, ':encoding(utf16le)';
+print $fh_concord "\x{feff}";
+ map {$_ =~ s/[[\]{}]//g } @concord;
+print $fh_concord @concord;
+$fh_concord->close;
+
+my $uniconcord = $unitex->corpus( 'filename' => $filename_concord );
+$uniconcord->normalize;
+$uniconcord->apply_graph_in_merge_mode;
+$uniconcord->apply_graph_in_replace_mode;
+$uniconcord->tokenize;
+$uniconcord->apply_lexical_ressources;
+my $concord_tokens_freq = $uniconcord->get_tokens_by_frequency();
+$uniconcord->delete_all_files();
+
+my $concord_lemma_freq = {};
+foreach my $form (keys %$concord_tokens_freq) {
+   my $lemma = _lemmatize($dico,$corpus_words_freq,$form);
+   $concord_lemma_freq->{$lemma} += $concord_tokens_freq->{$form};
+}
+my $conc_freq_fh = IO::File->new($opts->{output_dir} . '/' . 'conc-freq.csv' , 'w');
+binmode $conc_freq_fh, ':encoding(utf8)';
+
+foreach my $lemma (sort {$concord_lemma_freq->{$b} <=> $concord_lemma_freq->{$a} } keys %$concord_lemma_freq) {
+  print $conc_freq_fh $lemma, ';', $concord_lemma_freq->{$lemma}, "\n";
+}
+
+$conc_freq_fh->close;
+
+#======================================================================
+# ROUTINE _lemmatize
+# Get a list of words
+# Returns a lemmatized list
+#======================================================================
+sub _lemmatize {
+  my $dico      = shift;
+  my $dico_freq = shift;
+  my @tokens = @_;
+  my @lemmas = ();
+  
+  foreach my $token (@tokens) {
+    my @candidates = $dico->search(form => $token, return => 'lemma');
+    if (@candidates == 0) {
+      push @lemmas, $token;
+    }
+    elsif (@candidates == 1) {
+      push @lemmas, $candidates[0];
+    }
+    else {
+      my $max_candidate_occur = 0;
+      my $best_candidate = undef;
+      foreach my $candidate (@candidates) {
+        if (exists $dico_freq->{$candidate}
+          and $dico_freq->{$candidate} > $max_candidate_occur) {
+          $max_candidate_occur = $dico_freq->{$candidate};
+          $best_candidate = $candidate;
+        }
+      }
+      push @lemmas, $best_candidate;
+    }
+    
+  }
+  if ( not defined $lemmas[0]) {
+      $lemmas[0] = $tokens[0];
+  }
+  return wantarray ? @lemmas : "@lemmas";
+}
+
+#======================================================================
+# ROUTINE _are_valid_opts
+# Validate all the program arguments
+#======================================================================
+sub _are_valid_opts {
+    my $opts   = shift;
+    my $result = 1;
+
+    # test if vocabulary file exists
+    if ( not -e $opts->{vocabulary} ) {
+        $result = 0;
+        my $err_msg =
+            "Invalid argument (vocabulary)\n'"
+          . $opts->{vocabulary}
+          . "' file does not exist";
+        error( $err_msg, $error );
+    }
+
+    # test if corpora files exist
+    foreach my $corpus_file ( @{ $opts->{corpora} } ) {
+        if ( not -e $corpus_file ) {
+            $result = 0;
+            my $err_msg =
+                "Invalid argument (corpus)\n" . "'"
+              . $corpus_file
+              . "' file does not exist";
+            error( $err_msg, $error );
+        }
+    }
+    debug( $result != 0 ? "args validation: PASS" : "args validation: FAILED",
+        $debug );
+    return $result;
+}
+
+#======================================================================
+# ROUTINE _is_valid_unitex_installation
+# Control if UnitexToolLogger is accessible and running
+# TODO: to move in Lingua::Unitex
+#======================================================================
+sub _is_valid_unitex_installation {
+    my $unitex_dir = shift;
+    chop $unitex_dir if $unitex_dir =~ /[\/\\]$/;
+    my $result = 1;
+
+    # test if unitex dir exists
+    if ( not -e $unitex_dir ) {
+        $result = 0;
+        my $err_msg = "Directory $unitex_dir does not exist";
+        debug(
+            $result != 0
+            ? "unitex validation: PASS"
+            : "unitex validation: FAILED",
+            $debug
+        );
+        error( $err_msg, $error );
+        return $result;
+    }
+
+    # test if UnitexToolLogger exists (OS dependant)
+    my $unitex_exe = "UnitexToolLogger";
+    $unitex_exe = "UnitexToolLogger.exe" if $os eq "Win";
+    my $unitex_path = undef;
+
+    if ( !-e "$unitex_dir/App/$unitex_exe" and !-e "$unitex_dir/$unitex_exe" ) {
+        $result = 0;
+        my $err_msg =
+          "Impossible to find the $unitex_exe program in $unitex_dir";
+        debug(
+            $result != 0
+            ? "unitex validation PASS"
+            : "unitex validation FAILED",
+            $debug
+        );
+        error( $err_msg, $error );
+        return $result;
+    }
+    elsif ( -e "$unitex_dir/App/$unitex_exe" ) {
+        $unitex_path = "$unitex_dir/App/$unitex_exe";
+    }
+    elsif ( -e "$unitex_dir/$unitex_exe" ) {
+        $unitex_path = "$unitex_dir/$unitex_exe";
+    }
+
+    # test if UnitexToolLogger returns a 0 value
+    run3( $unitex_path, \undef, \undef, \undef,
+        { return_if_system_error => 1 } );
+    if ( $? != 0 ) {
+        $result = 0;
+        my $err_msg = "$unitex_path returns the error code $?";
+        debug(
+            $result != 0
+            ? "unitex validation PASS"
+            : "unitex validation FAILED",
+            $debug
+        );
+        error( $err_msg, $error );
+        return $result;
+    }
+
+    debug( $result != 0 ? "unitex validation PASS" : "unitex validation FAILED",
+        $debug );
+    return $result;
+}
+
+__DATA__
+
+=head1 NAME
+
+patternsim - DESCRIPTION
+
+=head1 SYNOPSIS
+
+patternsim [options] [corpus_file(s) ...]
+
+  Options:
+    --vocabulary (-v)        input vocabulary file
+    --output (-o)            output directory
+    --unitex                 Unitex main directory
+
+    --verbose                verbose mode
+    --help                   brief help message
+    --man                    full documentation
+
+=head1 OPTIONS
+
+=over 8
+
+=item --vocabulary --vocab -v I<vocabulary_file>
+
+Specify the UTF-8 input vocabulary file
+(one word per line)
+
+=item --unitex I<unitex_main_directory>
+
+Specify the Unitex main directory
+if you want to use your own Unitex installation
+(overwite the B<patternsim> configuration file)
+
+At first run, B<patternsim> will ask you if you want
+to install the Unitex program automatically
+or if you want to specify the location
+of your Unitex main directory.
+
+=item --output -o I<output_directory>
+
+Specify the output directory
+
+=item --verbose
+
+Explains what is being done
+
+=item --help -h
+
+Prints a brief help message and exits.
+
+=item --man
+
+Prints the manual page and exits.
+
+=item --verbose
+
+Activates the verbose mode. Explains all the processes.
+Outputs will be shown on stderr
+
+
+=back
+
+=head1 DESCRIPTION
+
+TODO
+
+=cut

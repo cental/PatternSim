@@ -1,0 +1,28 @@
+------------------------------------------------------------------------
+r530 | agata | 2008-10-22 09:14:00 +0200 (Wed, 22 Oct 2008) | 1 line
+
+English ressources for a sample DELAC inflection
+------------------------------------------------------------------------
+r275 | paumier | 2007-04-06 10:28:25 +0200 (Fri, 06 Apr 2007) | 1 line
+
+Restoring the 130,000 compound words in the dictionary
+------------------------------------------------------------------------
+r274 | paumier | 2007-04-06 10:07:44 +0200 (Fri, 06 Apr 2007) | 2 lines
+
+Replacing the previous DELAF with the clean one that can
+be downloaded in a text version at http://infolingu.univ-mlv.fr
+------------------------------------------------------------------------
+r178 | paumier | 2006-11-15 08:44:29 +0100 (Wed, 15 Nov 2006) | 3 lines
+
+Adding for each language a file named Norm.txt that
+defines replacement rules to be used by the new
+version of the Normalize program
+------------------------------------------------------------------------
+r95 | paumier | 2006-09-12 15:48:01 +0200 (Tue, 12 Sep 2006) | 1 line
+
+putting all the files in the English directory
+------------------------------------------------------------------------
+r84 | wastl | 2006-08-31 14:22:33 +0200 (Thu, 31 Aug 2006) | 1 line
+
+added dir for linguistic resources: English
+------------------------------------------------------------------------
