@@ -102,6 +102,14 @@ target-word;relatum-word;e-all;e1;e2;e3;е4;е5;е6;е7;е8;е9;е10;е11;е12;�
 Here *target-word* and *related-word* are words, *e-all* is the number of extractions between *target-word* and *relatum-word* with all the 17 patterns, *ei* is number of extractions between *target-word* and *relatum-word* with
 the *i*-th pattern (see the referenced above paper for details). Thus *e-all* = sum_*i* (*ei*).
 
+**Corpus**
+
+Here are some corpora which you may use with this tool:
+- Some Wikipedia articles: http://cental.fltr.ucl.ac.be/team/~panchenko/patternsim/corpus/
+- For even bigger corpora use ukWaC and WaCkypedia: http://wacky.sslmit.unibo.it/doku.php?id=corpora
+- Use DBPedia dump of Wikipedia: http://wiki.dbpedia.org/Downloads
+- Use a corpus of your own
+
 rank 
 ---------------
 
