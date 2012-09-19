@@ -3,13 +3,32 @@ PatternSim
 
 A tool for calculation semantic similarity between words from a text corpus based on lexico-syntactic patterns.
 
-patternsim.pl
+patternsim
 ----
 
-patternsim-rank 
+A tool for extraction of raw extraction counts with lexico-syntactic patterns. 
+
+**Requirements**
+- Perl 5.14.x
+- Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/)
+
+**Installation on Ubuntu 12.04**
+
+1. Install CPAN: "sudo cpan App::cpanminus"
+2. Install module "sudo cpan Config::General"
+3. "sudo cpan File::HomeDir"
+4. "sudo cpan Moose"
+5. Install Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/zips/Unitex3.0beta.zip)
+
+
+**Use**
+Example:
+./patternsim --unitex /home/sasha/Unitex3.0beta -v vocabulary.txt -o ./output corpus.txt
+
+rank 
 ---------------
 
-Reranking semantic similarity scores between words extracted with the patternsim.pl. Directory -- "rank".
+Reranking semantic similarity scores between words extracted with the patternsim. Directory -- "rank".
  
 **Synopsis**
 
