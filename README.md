@@ -3,6 +3,12 @@ PatternSim
 
 A tool for calculation semantic similarity between words from a text corpus based on lexico-syntactic patterns.
 
+- Currently, the tool consist of two separate programs -- patternsim and patternsim-rank (see below). 
+- This tool implements the extraction method described in this paper: 
+  Panchenko A., Morozova O., Naets H. “A Semantic Similarity Measure Based on Lexico-Syntactic Patterns.” // Accepted in Conference on Natural Language Processing (KONVENS 2012), — Vienna (Austria), 2012
+http://www.oegai.at/konvens2012/proceedings/23_panchenko12p/
+- A demo of the extraction results provided with this method can be accessed here: http://serelex.cental.be/
+
 patternsim
 ----
 
