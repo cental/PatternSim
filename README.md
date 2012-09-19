@@ -99,8 +99,8 @@ The files *pairs.csv*, *pairs-np.csv* and *pairs-voc.csv* are CSV files in the f
 ```
 target-word;relatum-word;e-all;e1;e2;e3;е4;е5;е6;е7;е8;е9;е10;е11;е12;е13;е14;е15;е16;е17\n
 ```
-Here *target-word* and *related-word* are words, *e-all* is the number of extractions between *target-word* and *relatum-word* with all 17 patterns, *ei* is number of extractions between *target-word* and *relatum-word* with
-the *i*-th pattern (see the referenced above paper for details).
+Here *target-word* and *related-word* are words, *e-all* is the number of extractions between *target-word* and *relatum-word* with all the 17 patterns, *ei* is number of extractions between *target-word* and *relatum-word* with
+the *i*-th pattern (see the referenced above paper for details). Thus *e-all* = sum_*i* (*ei*).
 
 rank 
 ---------------
