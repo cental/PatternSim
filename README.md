@@ -65,7 +65,7 @@ Options:
             will be shown on stderr
 
 **Example**
-Example:
+
 ./patternsim --unitex /home/sasha/Unitex3.0beta -v vocabulary.txt -o ./output corpus.txt
 
 rank 
