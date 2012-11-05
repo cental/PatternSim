@@ -13,7 +13,7 @@ use warnings;
 use utf8;
 
 use Getopt::Long;
-use Params::Check;  #TODO: remplacer la validation des paramètres par ce module
+use Params::Check;    #TODO: remplacer la validation des paramètres par ce module
 use Config::General;
 use Pod::Usage;
 use File::HomeDir;
@@ -24,6 +24,7 @@ use File::Basename qw(dirname);
 use Encode;
 
 use Data::Dumper;
+
 # local $Data::Dumper::Pair     = ':';
 # local $Data::Dumper::Sortkeys = 1;
 # local $Data::Dumper::Indent   = 1;
@@ -138,7 +139,6 @@ my %config = $config->getall();
 #----------------------------------------------------------------------
 # TODO
 
-
 my $unitex = Lingua::Unitex->new(
     language    => 'English',
     unitex_dir  => $opts->{unitex_dir},
@@ -192,26 +192,25 @@ while ( my $line = <> ) {
 push @splited_files, $filename_corpus;
 close $fh_corpus;
 
-
 #----------------------------------------------------------------------
 # Load vocabulary file
 #----------------------------------------------------------------------
-my $vocabulary_fh = IO::File->new($opts->{vocabulary}, 'r');
+my $vocabulary_fh = IO::File->new( $opts->{vocabulary}, 'r' );
 binmode $vocabulary_fh, ':encoding(utf8)';
-my %vocabulary = map {$_ =~ s/\s+$//; lc($_) => 1} <$vocabulary_fh>;
+my %vocabulary = map { $_ =~ s/\s+$//; lc($_) => 1 } <$vocabulary_fh>;
 $vocabulary_fh->close();
 
 #----------------------------------------------------------------------
 # Prepare relations extraction
 #----------------------------------------------------------------------
-my @concord = ();     # concordances
-my $dico    = Lingua::Unitex::Dela->new();  # corpus dictionary
+my @concord = ();                             # concordances
+my $dico    = Lingua::Unitex::Dela->new();    # corpus dictionary
 
-my $corpus_words_freq = {}; # word frequencies in the corpus
-my $conc_words_freq   = {}; # word frequencies in the concordances
+my $corpus_words_freq = {};                   # word frequencies in the corpus
+my $conc_words_freq   = {};                   # word frequencies in the concordances
 
-my $relations    = {}; # token relations
-my $relations_np = {}; # noun phrases relations 
+my $relations    = {};                        # token relations
+my $relations_np = {};                        # noun phrases relations
 
 #----------------------------------------------------------------------
 # Preprocess Corpus with Unitex Tools
@@ -223,93 +222,127 @@ foreach my $file (@splited_files) {
     $unicorpus->apply_graph_in_replace_mode;
     $unicorpus->tokenize;
     $unicorpus->apply_lexical_ressources;
-    $unicorpus->apply_graph( $script_dir
-          . 'share/Resources/English/Graphs/hypernymy/hypernym_main.grf' );
-         
-    $dico->merge_with($unicorpus->get_dictionary());
+    $unicorpus->apply_graph( $script_dir . 'share/Resources/English/Graphs/hypernymy/hypernym_main.grf' );
+
+    $dico->merge_with( $unicorpus->get_dictionary() );
     push @concord, $unicorpus->get_last_concord();
     my $tokens_by_freq = $unicorpus->get_tokens_by_frequency();
-    
-    foreach my $tok (keys %$tokens_by_freq) {
-        $corpus_words_freq->{$tok}+= $tokens_by_freq->{$tok};
+
+    foreach my $tok ( keys %$tokens_by_freq ) {
+        $corpus_words_freq->{$tok} += $tokens_by_freq->{$tok};
     }
     $unicorpus->delete_all_files();
 }
-    
-    #----------------------------------------------------------------------
-    # Extract relations
-    #----------------------------------------------------------------------
-foreach my $conc (@concord) {
-    
-      #----------------------------------------------------------------------
-      # get tokens in [...]
-      #----------------------------------------------------------------------
-      $conc = lc $conc;
-      (my $rule) = $conc =~ /\[pattern=(\d+)\]/;
-      my @tokens = $conc =~ /\[(.+?)\]=/g;
-      map {$_ =~ s/^\s+//; $_ =~ s/\s+$// } @tokens;
-      
-      #----------------------------------------------------------------------
-      # lemmatize tokens
-      #----------------------------------------------------------------------
-      my @lemmas = _lemmatize($dico,$corpus_words_freq,@tokens);
 
-      #----------------------------------------------------------------------
-      # record relation and rule number
-      #----------------------------------------------------------------------
-      while (@lemmas > 1) {
-        my $vedette = shift @lemmas;
-        foreach my $lemma (@lemmas) {
-          $relations->{$vedette}->{$lemma}->{$rule}++;
-          $relations->{$lemma}->{$vedette}->{$rule}++;
+#----------------------------------------------------------------------
+# Extract relations
+#----------------------------------------------------------------------
+foreach my $conc (@concord) {
+
+    #----------------------------------------------------------------------
+    # get tokens and relation types in [...]
+    #----------------------------------------------------------------------
+    $conc = lc $conc;
+    ( my $rule ) = $conc =~ /\[pattern=(\d+)\]/;
+    my @tokens_types = ();
+    while ( $conc =~ /\[(.+?)\]=(.+?)\}/g ) {
+        push @tokens_types, { token => $1, type => $2 };
+    }
+    map { $_->{token} =~ s/^\s+//; $_->{token} =~ s/\s+$// } @tokens_types;
+    my @tokens = map { $_->{token} } @tokens_types;
+
+    #----------------------------------------------------------------------
+    # lemmatize tokens
+    #----------------------------------------------------------------------
+    my @lemmas = _lemmatize( $dico, $corpus_words_freq, @tokens );
+
+    #----------------------------------------------------------------------
+    # record relation, relation type and rule number
+    #----------------------------------------------------------------------
+    while ( @lemmas > 1 ) {
+        my $vedette            = shift @lemmas;
+        my $vedette_token_type = shift @tokens_types;
+        for ( my $i = 0 ; $i < @lemmas ; $i++ ) {
+            my $lemma      = $lemmas[$i];
+            my $token_type = $tokens_types[$i];
+            $relations->{$vedette}->{$lemma}->{rules}->{$rule}++;
+            $relations->{$lemma}->{$vedette}->{rules}->{$rule}++;
+            
+            if ( $vedette_token_type->{type} eq "hypo" and $token_type->{type} eq "hyper" ) {
+            $relations->{$vedette}->{$lemma}->{types}->{'hypo'}++;
+                $relations->{$vedette}->{$lemma}->{types}->{'hyper_hypo'}++;
+            }
+            elsif ( $vedette_token_type->{type} eq "hyper" and $token_type->{type} eq "hypo" ) {
+            $relations->{$vedette}->{$lemma}->{types}->{'hyper'}++;
+                $relations->{$vedette}->{$lemma}->{types}->{'hyper_hypo'}++;
+            }
+
+            elsif ( $vedette_token_type->{type} eq "hypo" and $token_type->{type} eq "hypo" ) {
+                $relations->{$vedette}->{$lemma}->{types}->{'cohypo'}++;
+            }
+            elsif ( $vedette_token_type->{type} eq "syno" and $token_type->{type} eq "syno" ) {
+                $relations->{$vedette}->{$lemma}->{types}->{'syno'}++;
+            }
+            else {
+                print STDERR "unknown relation type: ", $vedette_token_type->{type}, '(', $vedette, ')', '-', $token_type->{type}, '(', $lemma, ')', "\n";
+            }
         }
-      }
-      
-      #----------------------------------------------------------------------
-      # get noun phrases in {...}
-      #----------------------------------------------------------------------
-      my @np = $conc =~ /\{(.+?)=\pL+\}/g;
-      map {$_ =~ s/[[\]]//g ;$_ =~ s/^\s+//; $_ =~ s/\s+$// } @np;
-      
-      #----------------------------------------------------------------------
-      # record np relation and rule number
-      #----------------------------------------------------------------------
-      while (@np > 1) {
+    }
+
+    #----------------------------------------------------------------------
+    # get noun phrases in {...}
+    #----------------------------------------------------------------------
+    my @np = $conc =~ /\{(.+?)=\pL+\}/g;
+    map { $_ =~ s/[[\]]//g; $_ =~ s/^\s+//; $_ =~ s/\s+$// } @np;
+
+    #----------------------------------------------------------------------
+    # record np relation and rule number
+    #----------------------------------------------------------------------
+    while ( @np > 1 ) {
         my $vedette = shift @np;
         foreach my $token (@np) {
-          $relations_np->{$vedette}->{$token}->{$rule}++;
-          $relations_np->{$token}->{$vedette}->{$rule}++;
+            $relations_np->{$vedette}->{$token}->{$rule}++;
+            $relations_np->{$token}->{$vedette}->{$rule}++;
         }
-      }
+    }
 }
 
 #----------------------------------------------------------------------
 # Save results
 #----------------------------------------------------------------------
-mkdir $opts->{output_dir}; # create output dir
+mkdir $opts->{output_dir};    # create output dir
 
 #----------------------------------------------------------------------
 # save pairs and pairs voc
 #----------------------------------------------------------------------
-my $pairs_fh     = IO::File->new($opts->{output_dir} . '/' . 'pairs.csv' , 'w');
-my $pairs_voc_fh = IO::File->new($opts->{output_dir} . '/' . 'pairs-voc.csv' , 'w');
-binmode($pairs_fh,    ':encoding(utf8)');
-binmode($pairs_voc_fh,':encoding(utf8)');
+my $pairs_fh     = IO::File->new( $opts->{output_dir} . '/' . 'pairs.csv',     'w' );
+my $pairs_voc_fh = IO::File->new( $opts->{output_dir} . '/' . 'pairs-voc.csv', 'w' );
+binmode( $pairs_fh,     ':encoding(utf8)' );
+binmode( $pairs_voc_fh, ':encoding(utf8)' );
 
-foreach my $vedette ( sort keys %$relations) {
-  foreach my $related (sort keys %{$relations->{$vedette}}) {
-    
-    my $extractions = 0;
-    my @rules = (0) x (17 + 1); # initalize tab @rules with 18 elements at '0'
-    foreach my $rule (keys %{$relations->{$vedette}->{$related}}) {
-      $rules[$rule] = $relations->{$vedette}->{$related}->{$rule};
-      $extractions += $relations->{$vedette}->{$related}->{$rule};
+foreach my $vedette ( sort keys %$relations ) {
+    foreach my $related ( sort keys %{ $relations->{$vedette} } ) {
+
+        my @types = (0) x 5; # initialize tab @types with 5 elements at '0' #TODO
+        
+        my $i = 0;
+        foreach my $type ( 'syno', 'cohypo', 'hyper_hypo', 'hyper', 'hypo' ) {
+          $types[$i] = $relations->{$vedette}->{$related}->{types}->{$type} if exists $relations->{$vedette}->{$related}->{types}->{$type} ;
+          $i++;
+        }
+
+        my $extractions = 0;
+        my @rules = (0) x ( 17 + 1 );    # initalize tab @rules with 18 elements at '0'
+        foreach my $rule ( keys %{ $relations->{$vedette}->{$related}->{rules} } ) {
+            $rules[$rule] = $relations->{$vedette}->{$related}->{rules}->{$rule};
+            $extractions += $relations->{$vedette}->{$related}->{rules}->{$rule};
+        }
+        shift @rules;    # remove column 0;
+        print $pairs_fh $vedette,     ';', $related . ';', join( ";", @types ), ';', $extractions, ';', join( ";", @rules ), "\n";
+        print $pairs_voc_fh $vedette, ';', $related . ';', join( ";", @types ), ';', $extractions, ';', join( ";", @rules ), "\n"
+          if exists $vocabulary{$vedette} and exists $vocabulary{$related};
+
     }
-     shift @rules; # remove column 0;
-     print $pairs_fh $vedette, ';', $related . ';', $extractions, ';', join(";",@rules), "\n";
-     print $pairs_voc_fh $vedette, ';', $related . ';', $extractions, ';', join(";",@rules), "\n" if exists $vocabulary{$vedette} and exists $vocabulary{$related};
-     
-  }
 }
 $pairs_fh->close;
 $pairs_voc_fh->close;
@@ -317,20 +350,20 @@ $pairs_voc_fh->close;
 #----------------------------------------------------------------------
 # save pairs np
 #----------------------------------------------------------------------
-my $pairs_np_fh = IO::File->new($opts->{output_dir} . '/' . 'pairs-np.csv' , 'w');
+my $pairs_np_fh = IO::File->new( $opts->{output_dir} . '/' . 'pairs-np.csv', 'w' );
 binmode $pairs_np_fh, ':encoding(utf8)';
 
-foreach my $vedette ( sort keys %$relations_np) {
-  foreach my $related (sort keys %{$relations_np->{$vedette}}) {
-    my $extractions = 0;
-    my @rules = (0) x (17 + 1); # initalize tab @rules with 18 elements at '0'
-    foreach my $rule (keys %{$relations_np->{$vedette}->{$related}}) {
-      $rules[$rule] = $relations_np->{$vedette}->{$related}->{$rule};
-      $extractions += $relations_np->{$vedette}->{$related}->{$rule};
+foreach my $vedette ( sort keys %$relations_np ) {
+    foreach my $related ( sort keys %{ $relations_np->{$vedette} } ) {
+        my $extractions = 0;
+        my @rules = (0) x ( 17 + 1 );    # initalize tab @rules with 18 elements at '0'
+        foreach my $rule ( keys %{ $relations_np->{$vedette}->{$related} } ) {
+            $rules[$rule] = $relations_np->{$vedette}->{$related}->{$rule};
+            $extractions += $relations_np->{$vedette}->{$related}->{$rule};
+        }
+        shift @rules;    # remove column 0;
+        print $pairs_np_fh $vedette, ';', $related . ';', $extractions, ';', join( ";", @rules ), "\n";
     }
-    shift @rules; # remove column 0;
-    print $pairs_np_fh $vedette, ';', $related . ';', $extractions, ';', join(";",@rules), "\n";
-  }
 }
 $pairs_np_fh->close;
 
@@ -338,15 +371,15 @@ $pairs_np_fh->close;
 #save lemma frequency
 #----------------------------------------------------------------------
 my $corpus_lemma_freq = {};
-foreach my $form (keys %$corpus_words_freq) {
-   my $lemma = _lemmatize($dico,$corpus_words_freq,$form);
-   $corpus_lemma_freq->{$lemma} += $corpus_words_freq->{$form};
+foreach my $form ( keys %$corpus_words_freq ) {
+    my $lemma = _lemmatize( $dico, $corpus_words_freq, $form );
+    $corpus_lemma_freq->{$lemma} += $corpus_words_freq->{$form};
 }
-my $corpus_freq_fh = IO::File->new($opts->{output_dir} . '/' . 'corpus-freq.csv' , 'w');
+my $corpus_freq_fh = IO::File->new( $opts->{output_dir} . '/' . 'corpus-freq.csv', 'w' );
 binmode $corpus_freq_fh, ':encoding(utf8)';
 
-foreach my $lemma (sort {$corpus_lemma_freq->{$b} <=> $corpus_lemma_freq->{$a} } keys %$corpus_lemma_freq) {
-  print $corpus_freq_fh $lemma, ';', $corpus_lemma_freq->{$lemma}, "\n";
+foreach my $lemma ( sort { $corpus_lemma_freq->{$b} <=> $corpus_lemma_freq->{$a} } keys %$corpus_lemma_freq ) {
+    print $corpus_freq_fh $lemma, ';', $corpus_lemma_freq->{$lemma}, "\n";
 }
 
 $corpus_freq_fh->close;
@@ -366,7 +399,7 @@ my $filename_concord;
 );
 binmode $fh_concord, ':encoding(utf16le)';
 print $fh_concord "\x{feff}";
- map {$_ =~ s/[[\]{}]//g } @concord;
+map { $_ =~ s/[[\]{}]//g } @concord;
 print $fh_concord @concord;
 $fh_concord->close;
 
@@ -380,15 +413,15 @@ my $concord_tokens_freq = $uniconcord->get_tokens_by_frequency();
 $uniconcord->delete_all_files();
 
 my $concord_lemma_freq = {};
-foreach my $form (keys %$concord_tokens_freq) {
-   my $lemma = _lemmatize($dico,$corpus_words_freq,$form);
-   $concord_lemma_freq->{$lemma} += $concord_tokens_freq->{$form};
+foreach my $form ( keys %$concord_tokens_freq ) {
+    my $lemma = _lemmatize( $dico, $corpus_words_freq, $form );
+    $concord_lemma_freq->{$lemma} += $concord_tokens_freq->{$form};
 }
-my $conc_freq_fh = IO::File->new($opts->{output_dir} . '/' . 'conc-freq.csv' , 'w');
+my $conc_freq_fh = IO::File->new( $opts->{output_dir} . '/' . 'conc-freq.csv', 'w' );
 binmode $conc_freq_fh, ':encoding(utf8)';
 
-foreach my $lemma (sort {$concord_lemma_freq->{$b} <=> $concord_lemma_freq->{$a} } keys %$concord_lemma_freq) {
-  print $conc_freq_fh $lemma, ';', $concord_lemma_freq->{$lemma}, "\n";
+foreach my $lemma ( sort { $concord_lemma_freq->{$b} <=> $concord_lemma_freq->{$a} } keys %$concord_lemma_freq ) {
+    print $conc_freq_fh $lemma, ';', $concord_lemma_freq->{$lemma}, "\n";
 }
 
 $conc_freq_fh->close;
@@ -399,37 +432,38 @@ $conc_freq_fh->close;
 # Returns a lemmatized list
 #======================================================================
 sub _lemmatize {
-  my $dico      = shift;
-  my $dico_freq = shift;
-  my @tokens = @_;
-  my @lemmas = ();
-  
-  foreach my $token (@tokens) {
-    my @candidates = $dico->search(form => $token, return => 'lemma');
-    if (@candidates == 0) {
-      push @lemmas, $token;
-    }
-    elsif (@candidates == 1) {
-      push @lemmas, $candidates[0];
-    }
-    else {
-      my $max_candidate_occur = 0;
-      my $best_candidate = undef;
-      foreach my $candidate (@candidates) {
-        if (exists $dico_freq->{$candidate}
-          and $dico_freq->{$candidate} > $max_candidate_occur) {
-          $max_candidate_occur = $dico_freq->{$candidate};
-          $best_candidate = $candidate;
+    my $dico      = shift;
+    my $dico_freq = shift;
+    my @tokens    = @_;
+    my @lemmas    = ();
+
+    foreach my $token (@tokens) {
+        my @candidates = $dico->search( form => $token, return => 'lemma' );
+        if ( @candidates == 0 ) {
+            push @lemmas, $token;
         }
-      }
-      push @lemmas, $best_candidate;
+        elsif ( @candidates == 1 ) {
+            push @lemmas, $candidates[0];
+        }
+        else {
+            my $max_candidate_occur = 0;
+            my $best_candidate      = undef;
+            foreach my $candidate (@candidates) {
+                if ( exists $dico_freq->{$candidate}
+                    and $dico_freq->{$candidate} > $max_candidate_occur )
+                {
+                    $max_candidate_occur = $dico_freq->{$candidate};
+                    $best_candidate      = $candidate;
+                }
+            }
+            push @lemmas, $best_candidate;
+        }
+
     }
-    
-  }
-  if ( not defined $lemmas[0]) {
-      $lemmas[0] = $tokens[0];
-  }
-  return wantarray ? @lemmas : "@lemmas";
+    if ( not defined $lemmas[0] ) {
+        $lemmas[0] = $tokens[0];
+    }
+    return wantarray ? @lemmas : "@lemmas";
 }
 
 #======================================================================
@@ -443,10 +477,7 @@ sub _are_valid_opts {
     # test if vocabulary file exists
     if ( not -e $opts->{vocabulary} ) {
         $result = 0;
-        my $err_msg =
-            "Invalid argument (vocabulary)\n'"
-          . $opts->{vocabulary}
-          . "' file does not exist";
+        my $err_msg = "Invalid argument (vocabulary)\n'" . $opts->{vocabulary} . "' file does not exist";
         error( $err_msg, $error );
     }
 
@@ -454,15 +485,11 @@ sub _are_valid_opts {
     foreach my $corpus_file ( @{ $opts->{corpora} } ) {
         if ( not -e $corpus_file ) {
             $result = 0;
-            my $err_msg =
-                "Invalid argument (corpus)\n" . "'"
-              . $corpus_file
-              . "' file does not exist";
+            my $err_msg = "Invalid argument (corpus)\n" . "'" . $corpus_file . "' file does not exist";
             error( $err_msg, $error );
         }
     }
-    debug( $result != 0 ? "args validation: PASS" : "args validation: FAILED",
-        $debug );
+    debug( $result != 0 ? "args validation: PASS" : "args validation: FAILED", $debug );
     return $result;
 }
 
@@ -483,8 +510,7 @@ sub _is_valid_unitex_installation {
         debug(
             $result != 0
             ? "unitex validation: PASS"
-            : "unitex validation: FAILED",
-            $debug
+            : "unitex validation: FAILED", $debug
         );
         error( $err_msg, $error );
         return $result;
@@ -497,13 +523,11 @@ sub _is_valid_unitex_installation {
 
     if ( !-e "$unitex_dir/App/$unitex_exe" and !-e "$unitex_dir/$unitex_exe" ) {
         $result = 0;
-        my $err_msg =
-          "Impossible to find the $unitex_exe program in $unitex_dir";
+        my $err_msg = "Impossible to find the $unitex_exe program in $unitex_dir";
         debug(
             $result != 0
             ? "unitex validation PASS"
-            : "unitex validation FAILED",
-            $debug
+            : "unitex validation FAILED", $debug
         );
         error( $err_msg, $error );
         return $result;
@@ -516,23 +540,20 @@ sub _is_valid_unitex_installation {
     }
 
     # test if UnitexToolLogger returns a 0 value
-    run3( $unitex_path, \undef, \undef, \undef,
-        { return_if_system_error => 1 } );
+    run3( $unitex_path, \undef, \undef, \undef, { return_if_system_error => 1 } );
     if ( $? != 0 ) {
         $result = 0;
         my $err_msg = "$unitex_path returns the error code $?";
         debug(
             $result != 0
             ? "unitex validation PASS"
-            : "unitex validation FAILED",
-            $debug
+            : "unitex validation FAILED", $debug
         );
         error( $err_msg, $error );
         return $result;
     }
 
-    debug( $result != 0 ? "unitex validation PASS" : "unitex validation FAILED",
-        $debug );
+    debug( $result != 0 ? "unitex validation PASS" : "unitex validation FAILED", $debug );
     return $result;
 }
 
