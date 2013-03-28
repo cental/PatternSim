@@ -3,16 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using LumenWorks.Framework.IO.Csv;
 
 namespace AuthecoLib {
-
     public class PairInfo {
-        public PairInfo(string type, double sim) {
-			this.type = type;
+        public PairInfo(double sim, int patternsNum) {
 			this.sim = sim;			
-			this.patternsNum = 0;
+			this.patternsNum = patternsNum;
         }        
-        public string type; // type of the relation
         public double sim; // semantic similarity between pair of terms        		
 		public int patternsNum; // number of patterns which were used to extract the relation
     }
@@ -21,84 +19,57 @@ namespace AuthecoLib {
     /// Represents a collection of binary semantic relations between words "word1;word2;type"
     /// </summary>
     public class RelationsCollection : Dictionary<string, Dictionary<string, PairInfo>> {
-        public RelationsCollection() {
-            isTransformed = false;
-        }
+		const int TARGET_FIELD = 0;
+        const int RELATUM_FIELD = 1;
+        const int SUM_FIELD = 7;
+		const int PATTERN_FIRST_FIELD = 8;
 
-        /// <summary>
+		public int _relationsCount;
+
+		/// <summary>
         /// This field contains the vocabulary as it was on the moment of its loading. 
         /// The field exist for optimization purposes.
         /// </summary>
         private List<string> _shuffledVocabulary = new List<string>();
 
-        /// <summary>
-        /// Loads relations from a CSV file into memory. The relationsFile is in
-        /// "word1;word2;type[;sim]" format if blessFormat otherwise it is supposed to be 
-        /// in the "word1;type;word2[;sim]" format.
-        /// </summary>
-        public RelationsCollection (string relationsFile, bool blessFormat) : 
-			this(relationsFile, blessFormat, false)
-		{  }
+		public RelationsCollection() {
+            isTransformed = false;
+        }
+		        
+        public RelationsCollection (string relationsFile) : 
+			this(relationsFile, false) {  }
 
 		/// <summary>
         /// Loads relations from a CSV file into memory. The relationsFile is in
-        /// "word1;word2;type[;sim]" format if blessFormat otherwise it is supposed to be 
-        /// in the "word1;type;word2[;sim]" format.
+        /// "target;relatum;syno;cohypo;hyper_hypo;hyper;hypo;sum;pattern1;pattern2;
+		/// pattern3;pattern4;pattern5;pattern6;pattern7;pattern8;pattern9;pattern10;
+		/// pattern11;pattern12;pattern13;pattern14;pattern15;pattern16;pattern17"
 		/// If addSymmetric then symmetrical relations are also added. 
         /// </summary>
-        public RelationsCollection (string relationsFile, bool blessFormat, bool addSymetric) {
+        public RelationsCollection (string relationsFile, bool addSymetric) {
 			isTransformed = false;
 			_relationsCount = 0;
 			if (File.Exists (relationsFile)) {
-				load (relationsFile, blessFormat, addSymetric);
+				load (relationsFile, addSymetric);
 			} 
 			else {
-				Console.WriteLine ("Error: relations file '{0}' does not exist.",
-				                   relationsFile);
-			}
-            
+				Console.WriteLine ("Error: relations file '{0}' does not exist.", relationsFile);
+			}            
         }
 
-        public void add(string target, string relatum, string type, double sim){
+        public void add(string target, string relatum, double sim, int patternsNum){
             if (!this.ContainsKey(target)) {
                 this.Add(target, new Dictionary<string, PairInfo>());
-                this[target].Add(relatum, new PairInfo(type, sim));
-                _relationsCount++;
-            }
-            else if (!this[target].ContainsKey(relatum)) {
-                this[target].Add(relatum, new PairInfo(type, sim));
-                _relationsCount++;
-            }
-            else {
-                // If relation already exist but it is random then replace it with the new one
-                if (this[target][relatum].type == "random" && (!type.Contains("random"))) {
-                    this[target][relatum].type = type;
-					Console.WriteLine("Replaced: {0},{1},{2}", target, relatum, type);
-                }
-            }            
-        }
+			}
 
-        public void add(string target, string relatum, string type) {
-            add(target, relatum, type, 0);
+			if (this[target].ContainsKey(relatum)) {
+				//Console.WriteLine("<{0},{1}> is already in the dictionary", target, relatum);
+			}
+			else{ 
+				this[target].Add(relatum, new PairInfo(sim, patternsNum));
+            	_relationsCount++;         
+			}
         }
-
-        public void add(string target, string relatum) {
-            add(target, relatum, "?", 0);
-        }
-
-        /// <summary>
-        /// Returns relation type.
-        /// </summary>
-        public string getType(string target, string relatum) {
-            if (this.ContainsKey(target)) {
-                if (this[target].ContainsKey(relatum)) {
-                    return this[target][relatum].type;
-                }
-            }
-            return "?";
-        }
-
-        //private string [] types = {'attri';'coord';'event';'hyper';'mero';'random-n';'random-v';'random-j'};
 
         /// <summary>
         /// Returns the unique vocabulary sorted alphabetically of the set of relations
@@ -122,42 +93,46 @@ namespace AuthecoLib {
 
             return vocList;
         }
+				
+		/// "target;relatum;syno;cohypo;hyper_hypo;hyper;hypo;sum;pattern1;pattern2;
+		/// pattern3;pattern4;pattern5;pattern6;pattern7;pattern8;pattern9;pattern10;
+		/// pattern11;pattern12;pattern13;pattern14;pattern15;pattern16;pattern17"
+		public void load(string input, bool addSymmetric) {
+			string target;
+			string relatum;
+			double sim;
+			int patterns;
+			int patternN;
 
-        public int _relationsCount;
+			using (CsvReader csv = new CsvReader(new StreamReader(input, Encoding.UTF8), true, ';')) {
+        		int fieldCount = csv.FieldCount;
+		        //string[] headers = csv.GetFieldHeaders();
+				// Read file with relations line by line
+				while (csv.ReadNextRecord()) {
+					// Try to add an entry
+					try{
+                    	// Read the fields                        
+                    	target = csv[TARGET_FIELD].Trim().ToLower();
+                    	relatum = csv[RELATUM_FIELD].Trim().ToLower();
+                    	sim = (double.TryParse(csv[SUM_FIELD], out sim) ? sim : 0);
 
-        private void load(string relationsFile, bool blessFormat, bool addSymmetric) {
-            // Initialization
-            StreamReader sr = new StreamReader(relationsFile);
-            string[] fields;
-            string line, target, relatum, type;
-            double sim;
-            int targetField = 0;
-            int relatumField = (blessFormat ? 1 : 2);
-            int typeField = (blessFormat ? 2 : 1);
-            int simField = 3;
-                       
-            // Read file with relations line by line
-            while ((line = sr.ReadLine()) != null) {
-                // Read the fields from the current line                
-                fields = line.Split(new char[] { ';' });
-
-                // Add entry if the line is well-formed
-                if (fields.Length >= 2) {
-                    // Read the fields                        
-                    target = fields[targetField].Trim().ToLower();
-                    relatum = fields[relatumField].Trim().ToLower();
-                    type = (fields.Length >= 3 ? fields[typeField].Trim().ToLower() : "?");
-                    sim = (fields.Length >= 4 && double.TryParse(fields[simField], out sim) ? sim : 0);
-
-                    // Add the word pair to the dictionary
-					this.add(target, relatum, type, sim); // We assume that the input file contains symmetric relations                     
-					if(addSymmetric) this.add(relatum, target, type, sim);                    
-                }
-            }
-
-            sr.Close();
-        }
-
+						patterns = 0;
+						for(int i = PATTERN_FIRST_FIELD; i < fieldCount; i++){
+							patternN = (int.TryParse(csv[i], out patternN) ? patternN : 0);
+							if (patternN > 0) patterns++;
+						}
+						// Add the word pair to the dictionary
+						this.add(target, relatum, sim, patterns); // We assume that the input file contains symmetric relations                     
+						//Console.WriteLine("{0}\t{1}\t{2}\t{3}", target, relatum, sim, patterns);
+						if(addSymmetric) this.add(relatum, target, sim, patterns);                    
+                	}
+					catch(Exception exc){
+						Console.WriteLine("{0}\t{1}", csv[0] + ";" + csv[1] + ";" + csv[2], exc.Message);
+					}
+            	}
+			}
+		}
+				
 		public void save(string outputFile) { 
 			save(outputFile, false, false);
 		}
@@ -191,17 +166,17 @@ namespace AuthecoLib {
                 // Write all relatums of the target
                 foreach (var relatum in relatums) {
                    	if (noSim) {
-                       	outputStm.WriteLine("{0};{1};{2}",
-							target.Key, relatum.Key, relatum.Value.type);
+                       	outputStm.WriteLine("{0};{1}",
+							target.Key, relatum.Key);
                    	}
                    	else {
                        	if(relatum.Value.sim > 1){
-							outputStm.WriteLine("{0};{1};{2};{3:G10}",
-						    	target.Key, relatum.Key, relatum.Value.type, relatum.Value.sim);
+							outputStm.WriteLine("{0};{1};{2:G10}",
+						    	target.Key, relatum.Key, relatum.Value.sim);
 						}
 						else{
-							outputStm.WriteLine("{0};{1};{2};{3:F10}",
-						    	target.Key, relatum.Key, relatum.Value.type, relatum.Value.sim);
+							outputStm.WriteLine("{0};{1};{2:F10}",
+						    	target.Key, relatum.Key, relatum.Value.sim);
 						}
                    	}
                 }
@@ -214,14 +189,14 @@ namespace AuthecoLib {
         public void print() {
             foreach (var target in this) {
                 foreach (var relatum in target.Value) {
-                    if(relatum.Value.sim > 1){
-							Console.WriteLine("{0};{1};{2};{3:G10}",
-						    	target.Key, relatum.Key, relatum.Value.type, relatum.Value.sim);
-						}
-						else{
-							Console.WriteLine("{0};{1};{2};{3:F10}",
-						    	target.Key, relatum.Key, relatum.Value.type, relatum.Value.sim);
-						}
+                    if(relatum.Value.sim >= 1){
+						Console.WriteLine("{0};{1};{2:G10};{3}",
+						    	target.Key, relatum.Key, relatum.Value.sim, relatum.Value.patternsNum);
+					}
+					else{
+						Console.WriteLine("{0};{1};{2:F10};{3}",
+						    	target.Key, relatum.Key, relatum.Value.sim, relatum.Value.patternsNum);
+					}
                 }
             }
         }

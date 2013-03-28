@@ -20,6 +20,7 @@
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
     <Externalconsole>true</Externalconsole>
+    <Commandlineparameters>-p ~/Desktop/fr.csv -c ~/Desktop/corpus-freq-fr.csv -o ~/Desktop/output.txt -t 1</Commandlineparameters>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <DebugType>none</DebugType>
@@ -32,6 +33,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
+    <Reference Include="System.Data" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Main.cs" />
@@ -40,8 +42,29 @@
     <Compile Include="ConcreteCommands.cs" />
     <Compile Include="IVocabulary.cs" />
     <Compile Include="RelationsCollection.cs" />
-    <Compile Include="libcmdline\CommandLine.cs" />
-    <Compile Include="libcmdline\CommandLineText.cs" />
+    <Compile Include="lib\CommandLine.cs" />
+    <Compile Include="lib\CommandLineText.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\CachedCsvReader.CsvBindingList.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\CachedCsvReader.CsvPropertyDescriptor.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\CachedCsvReader.CsvRecordComparer.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\CachedCsvReader.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\CsvReader.DataReaderValidations.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\CsvReader.RecordEnumerator.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\CsvReader.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\MissingFieldAction.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\ParseErrorAction.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\ValueTrimmingOptions.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\Events\ParseErrorEventArgs.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\Exceptions\MalformedCsvException.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\Exceptions\MissingFieldCsvException.cs" />
+    <Compile Include="lib\LumenWorks.Framework.IO\Csv\Resources\ExceptionMessage.Designer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Folder Include="lib\" />
+    <Folder Include="lib\LumenWorks.Framework.IO\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="lib\LumenWorks.Framework.IO\Csv\Resources\ExceptionMessage.resx" />
+  </ItemGroup>
 </Project>

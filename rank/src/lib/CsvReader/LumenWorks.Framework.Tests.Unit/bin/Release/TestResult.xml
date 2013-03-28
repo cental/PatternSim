@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!--This file represents the results of running a test suite-->
+<test-results name="C:\Projects\CodeProject\CsvReader\src\LumenWorks.Framework.Tests.Unit\bin\Release\LumenWorks.Framework.Tests.Unit.dll" total="3" errors="0" failures="0" not-run="0" inconclusive="0" ignored="0" skipped="0" invalid="0" date="2011-07-06" time="00:45:16">
+  <environment nunit-version="2.5.5.10112" clr-version="2.0.50727.5444" os-version="Microsoft Windows NT 6.1.7601 Service Pack 1" platform="Win32NT" cwd="C:\Projects\CodeProject\CsvReader\src" machine-name="LENOVO" user="Bazz" user-domain="lenovo" />
+  <culture-info current-culture="en-US" current-uiculture="en-US" />
+  <test-suite type="Assembly" name="C:\Projects\CodeProject\CsvReader\src\LumenWorks.Framework.Tests.Unit\bin\Release\LumenWorks.Framework.Tests.Unit.dll" executed="True" result="Success" success="True" time="0.062" asserts="0">
+    <results>
+      <test-suite type="Namespace" name="LumenWorks" executed="True" result="Success" success="True" time="0.058" asserts="0">
+        <results>
+          <test-suite type="Namespace" name="Framework" executed="True" result="Success" success="True" time="0.058" asserts="0">
+            <results>
+              <test-suite type="Namespace" name="Tests" executed="True" result="Success" success="True" time="0.057" asserts="0">
+                <results>
+                  <test-suite type="Namespace" name="Unit" executed="True" result="Success" success="True" time="0.056" asserts="0">
+                    <results>
+                      <test-suite type="Namespace" name="IO" executed="True" result="Success" success="True" time="0.054" asserts="0">
+                        <results>
+                          <test-suite type="Namespace" name="Csv" executed="True" result="Success" success="True" time="0.052" asserts="0">
+                            <results>
+                              <test-suite type="TestFixture" name="CsvReaderTest" executed="True" result="Success" success="True" time="0.049" asserts="0">
+                                <results>
+                                  <test-suite type="ParameterizedTest" name="GetFieldHeaders_WithEmptyHeaderNames" executed="True" result="Success" success="True" time="0.043" asserts="0">
+                                    <results>
+                                      <test-case name="LumenWorks.Framework.Tests.Unit.IO.Csv.CsvReaderTest.GetFieldHeaders_WithEmptyHeaderNames(&quot;AnotherName&quot;)" executed="True" result="Success" success="True" time="0.032" asserts="12" />
+                                      <test-case name="LumenWorks.Framework.Tests.Unit.IO.Csv.CsvReaderTest.GetFieldHeaders_WithEmptyHeaderNames(&quot;&quot;)" executed="True" result="Success" success="True" time="0.000" asserts="12" />
+                                      <test-case name="LumenWorks.Framework.Tests.Unit.IO.Csv.CsvReaderTest.GetFieldHeaders_WithEmptyHeaderNames(null)" executed="True" result="Success" success="True" time="0.000" asserts="12" />
+                                    </results>
+                                  </test-suite>
+                                </results>
+                              </test-suite>
+                            </results>
+                          </test-suite>
+                        </results>
+                      </test-suite>
+                    </results>
+                  </test-suite>
+                </results>
+              </test-suite>
+            </results>
+          </test-suite>
+        </results>
+      </test-suite>
+    </results>
+  </test-suite>
+</test-results>

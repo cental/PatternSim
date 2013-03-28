@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<VisualState xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" ShowCheckBoxes="false">
+  <TopNode>[0-1152]C:\Projects\CodeProject\CsvReader\src\LumenWorks.Framework.Tests.Unit\bin\Release\LumenWorks.Framework.Tests.Unit.dll</TopNode>
+  <SelectedNode>[0-1122]LumenWorks.Framework.Tests.Unit.IO.Csv.CsvReaderTest.GetFieldHeaders_WithEmptyHeaderNames</SelectedNode>
+  <ExcludeCategories>false</ExcludeCategories>
+  <Nodes>
+    <Node UniqueName="[0-1152]C:\Projects\CodeProject\CsvReader\src\LumenWorks.Framework.Tests.Unit\bin\Release\LumenWorks.Framework.Tests.Unit.dll" Expanded="true" />
+    <Node UniqueName="[0-1153]LumenWorks" Expanded="true" />
+    <Node UniqueName="[0-1154]LumenWorks.Framework" Expanded="true" />
+    <Node UniqueName="[0-1155]LumenWorks.Framework.Tests" Expanded="true" />
+    <Node UniqueName="[0-1156]LumenWorks.Framework.Tests.Unit" Expanded="true" />
+    <Node UniqueName="[0-1157]LumenWorks.Framework.Tests.Unit.IO" Expanded="true" />
+    <Node UniqueName="[0-1158]LumenWorks.Framework.Tests.Unit.IO.Csv" Expanded="true" />
+    <Node UniqueName="[0-1000]LumenWorks.Framework.Tests.Unit.IO.Csv.CsvReaderMalformedTest" Expanded="true" />
+    <Node UniqueName="[0-1052]LumenWorks.Framework.Tests.Unit.IO.Csv.CsvReaderTest" Expanded="true" />
+    <Node UniqueName="[0-1122]LumenWorks.Framework.Tests.Unit.IO.Csv.CsvReaderTest.GetFieldHeaders_WithEmptyHeaderNames" Expanded="true" />
+  </Nodes>
+</VisualState>
