@@ -1,8 +1,8 @@
 ﻿<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Release|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="src/IVocabulary.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="src/ConcreteCommands.cs">
     <Files>
-      <File FileName="src/ConcreteCommands.cs" Line="84" Column="10" />
+      <File FileName="src/ConcreteCommands.cs" Line="42" Column="23" />
       <File FileName="src/RelationsCollection.cs" Line="611" Column="18" />
       <File FileName="src/IVocabulary.cs" Line="3" Column="16" />
     </Files>
@@ -12,7 +12,7 @@
           <Node name="patternsim-rank" expanded="True">
             <Node name="References" expanded="True" />
             <Node name="lib" expanded="True" />
-            <Node name="IVocabulary.cs" selected="True" />
+            <Node name="ConcreteCommands.cs" selected="True" />
           </Node>
         </State>
       </Pad>

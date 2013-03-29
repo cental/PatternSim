@@ -48,7 +48,6 @@ namespace AuthecoConsole {
 		          	"  6 -- Efreq-Rnum-Cfreq-Pnum, reranking by number of relations to other words, by word frequency " +
 		          	"and by number of different patterns extracted the relations. Uses options 'corpusfreq', 'patterns', 'beta' and 'sqrt'.")]
         public int norm { get; set; }
-		
 
 		[Option("a", "alpha",
                 Required = false,		         
