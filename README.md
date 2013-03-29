@@ -34,6 +34,10 @@ A tool for extraction of raw extraction counts with lexico-syntactic patterns.
 4. "sudo cpan Moose"
 5. Install Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/zips/Unitex3.0beta.zip)
 
+**Quick Start**
+
+Use *./rerank.sh* to rerank relations with the default formula, and as an example of usage of patternsim-rank.
+
 **Synopsis**
 
 patternsim [options] [corpus_file(s) ...]
