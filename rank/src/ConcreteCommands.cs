@@ -33,7 +33,7 @@ namespace AuthecoConsole {
 	
         [Option("o", "output",
                 Required = true,
-                HelpText = "An UTF-8 encoded CSV file 'target;relatum;sim', where 'sim' is similarity score between 'target' and 'relatum'.")]
+		        HelpText = "An UTF-8 encoded CSV file 'target;relatum;sim', where 'sim' is similarity score between 'target' and 'relatum'. This file is sorted by 'target' and then 'sim'.")]
         public string output{ get; set; }
 
         [Option("t", "type",
@@ -99,7 +99,7 @@ namespace AuthecoConsole {
 					break;
 				case 6:
 					relations.rerankEfreqCfreqRnum(corpusFreq, beta);
-					//relations.multiplyPnum(patternsFreq, patternSqrt);
+					relations.multiplyPnum(patternSqrt);
 					break;
 				default:
 					Console.WriteLine("Unknown reranking type '{0}' -- using 1 (Efreq).", norm);

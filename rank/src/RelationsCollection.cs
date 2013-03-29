@@ -63,7 +63,7 @@ namespace AuthecoLib {
 			}
 
 			if (this[target].ContainsKey(relatum)) {
-				//Console.WriteLine("<{0},{1}> is already in the dictionary", target, relatum);
+				Console.WriteLine("<{0},{1}> is already in the dictionary", target, relatum);
 			}
 			else{ 
 				this[target].Add(relatum, new PairInfo(sim, patternsNum));
@@ -701,10 +701,8 @@ namespace AuthecoLib {
 		/// <summary>
         /// Multiply each sim by patternsNum if it is > 0 or by sqrt(patternsNum) if sqrt is true.
 		/// </summary>
-        public void multiplyPnum(string patternsNumFile, bool sqrt) {
+        public void multiplyPnum(bool sqrt) {
 
-			this.loadPatternNums(patternsNumFile, false);
-			
 			double coeff;
 			foreach(var target in this) {
 				foreach(var relatum in target.Value) {
@@ -754,69 +752,8 @@ namespace AuthecoLib {
 				return 0;
 			}
 		}		
-		
-		/// <summary>
-		/// Loads number of extracted patterns from an external source.
-		/// Input: an extended bless frame "target;relatum;type;sim;p1;p2;...;pn",
-		/// pairs and the number of patterns "p1;p2;...;pn" -- n in this case. 
-		/// The information is loaded into the patternsNum field.
-		/// If blessFormat is false then the field blessFormat is absent. 
-		/// </summary>
-		public void loadPatternNums (string relationsFile, bool blessFormat){
-			// Initialization
-			StreamReader sr = new StreamReader (relationsFile);
-			string[] fields;
-			string line, target, relatum;
-			int patternsNum;
-			int targetField = 0;
-			int relatumField = 1;
-			int errorsNum = 0;
-			int relationsNum = 0;
-			int relationsUpdatedNum = 0;
-			           
-			// Read file with relations line by line
-			while ((line = sr.ReadLine()) != null) {
-				// Read the fields from the current line                
-				fields = line.Split (new char[] { ';' });
-				
-				// Add entry if the line is well-formed
-				if (fields.Length >= 4) {
-					// Read the fields                        
-					target = fields [targetField].Trim ().ToLower ();
-					relatum = fields [relatumField].Trim ().ToLower ();
-					patternsNum = getPatternsNum (fields, blessFormat);
-					
-					if (this.ContainsKey(target) && this [target].ContainsKey (relatum) && patternsNum > 0) {
-						this [target] [relatum].patternsNum =
-							Math.Max (this [target] [relatum].patternsNum, patternsNum);                    
-						relationsUpdatedNum++;
-					} else if (patternsNum == 0) {
-						errorsNum++;						
-					} else {
-						// A pair does not exist in the loaded dictionary -- skip it                    
-					}
-					relationsNum++;
-				} 
-				else {
-					errorsNum++;					
-				}				
-			}
-			sr.Close ();
-			
-			#region DEBUG
-			/*
-			foreach (var t in this) {
-				foreach (var r in t.Value) {
-					Console.WriteLine("({0},{1}) patterns_num={2}",
-							   t.Key, r.Key, r.Value.patternsNum);
-				}
-			}
-			*/
-			#endregion
-			Console.WriteLine ("InputRelations={0}, InputRelationsWithoutPatterns={1}, RelationsUpdated={2}",
-			                   relationsNum, errorsNum, relationsUpdatedNum);
-        }
         
+		/*
 		/// <summary>
 		/// Extracts the features for a input frame extract 'target;relatum;type;sim'.
 		/// extract -- A file with a set of relations. The features will be extracted from these relations. The file is in the format 'target;relatum;type'
@@ -824,7 +761,7 @@ namespace AuthecoLib {
 		/// patterns -- A CSV file 'target;relatum;sim;p1;p2;...;pn' with information about extraction patterns.
 		/// </summary>
 		public void extractFeatures(string extractFile, string freqFile, string patternsFile, string outputFile) {
-			/*
+
 			int MIN_BRANCH_FREQ = 1;
 			
 			// Load data
@@ -866,7 +803,8 @@ namespace AuthecoLib {
 				}
 			}	
 			outputStm.Close();
-			*/
 		}		
+		*/
+
     }
 }
