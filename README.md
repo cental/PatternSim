@@ -121,6 +121,26 @@ Here are some corpora which you may use with this tool:
 - Use DBPedia dump of Wikipedia: http://wiki.dbpedia.org/Downloads
 - Use a corpus of your own
 
+**Russian morphological dictionary**
+
+The Russian dictionary in this repository is an extract of the Russian computational morphological dictionary developed at CIS, Munich. This extract contains about 15% of the original dictionary (the most frequent lemmata). The whole dictionary actually contains 140,000 simple entries (= 2.7 million distinct forms), 166,000 simple proper nouns (= 900,000 distinct forms) and 1800 compound words.
+
+If you want to use the full version of the lexicon, please contact: 
+
+   Sebastian Nagel
+   CIS
+   Oettingenstr. 67
+   80538 München
+   Germany
+   wastl@cis.uni-muenchen.de
+   http://www.cis.uni-muenchen.de
+
+For additional information see: 
+
+Nagel, Sebastian 2002: Formenbildung im Russischen. Formale Beschreibung und Automatisierung für das CISLEX-Wörterbuchsystem (http://www.cis.uni-muenchen.de/~wastl/pub/ruslex.pdf)
+
+For a short description (in German), see http://www.cis.uni-muenchen.de/~wastl/pub/ruslexUnitex.pdf
+
 rank 
 ---------------
 
