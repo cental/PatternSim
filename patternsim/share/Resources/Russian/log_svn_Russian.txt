@@ -1,0 +1,23 @@
+------------------------------------------------------------------------
+r3343 | friburger | 2012-09-27 13:26:00 +0200 (Thu, 27 Sep 2012) | 1 line
+
+Added a share folder each Cassys language folder
+------------------------------------------------------------------------
+r3175 | paumier | 2012-07-24 12:53:08 +0200 (Tue, 24 Jul 2012) | 1 line
+
+Adding Gramlab's TEI graphs to every language directory
+------------------------------------------------------------------------
+r2050 | friburger | 2010-12-21 11:42:52 +0100 (Tue, 21 Dec 2010) | 1 line
+
+Creating the folders named Cassys (for each language) for the Cassys System
+------------------------------------------------------------------------
+r178 | paumier | 2006-11-15 08:44:29 +0100 (Wed, 15 Nov 2006) | 3 lines
+
+Adding for each language a file named Norm.txt that
+defines replacement rules to be used by the new
+version of the Normalize program
+------------------------------------------------------------------------
+r107 | paumier | 2006-09-13 11:44:29 +0200 (Wed, 13 Sep 2006) | 1 line
+
+Adding resources for Russian
+------------------------------------------------------------------------
