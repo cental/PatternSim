@@ -127,13 +127,13 @@ The Russian dictionary in this repository is an extract of the Russian computati
 
 If you want to use the full version of the lexicon, please contact: 
 
-   Sebastian Nagel
-   CIS
-   Oettingenstr. 67
-   80538 München
-   Germany
-   wastl@cis.uni-muenchen.de
-   http://www.cis.uni-muenchen.de
+> Sebastian Nagel
+> CIS
+> Oettingenstr. 67
+> 80538 München
+> Germany
+> wastl@cis.uni-muenchen.de
+> http://www.cis.uni-muenchen.de
 
 For additional information see: 
 
