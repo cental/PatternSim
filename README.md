@@ -4,9 +4,11 @@ PatternSim
 A tool for calculation semantic similarity between words from a text corpus based on lexico-syntactic patterns.
 
 - Currently, the tool consist of two separate programs -- *patternsim* and *patternsim-rank* (see below). 
-- This tool implements the extraction method described in this paper: 
+- This tool implements the extraction method described in these papers: 
 	- Panchenko A., Morozova O., Naets H. “A Semantic Similarity Measure Based on Lexico-Syntactic Patterns.” In Proceedings of the 11th Conference on Natural Language Processing (KONVENS 2012), — Vienna (Austria), 2012
 	- http://www.oegai.at/konvens2012/proceedings/23_panchenko12p/
+	- Kristina Sabirova, Artem Lukanin. Automatic Extraction of Hypernyms and Hyponyms from Russian Texts // В кн.: Supplementary Proceedings of the 3rd International Conference on Analysis of Images, Social Networks and Texts (AIST 2014) / Ed. by D. I. Ignatov, M. Y. Khachay, A. Panchenko, N. Konstantinova, R. Yavorsky, U. Dmitry. Vol. 1197: Supplementary Proceedings of AIST 2014. CEUR-WS.org, 2014. С. 35-40.
+	- http://ceur-ws.org/Vol-1197/paper6.pdf
 - A demo of the extraction results provided with this method can be accessed here: http://serelex.cental.be/
 - Related repositories: 
 	- Source code of the demo system: https://github.com/PomanoB/lsse
