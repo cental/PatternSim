@@ -34,7 +34,9 @@ A tool for extraction of raw extraction counts with lexico-syntactic patterns.
 2. Install module "sudo cpan Config::General"
 3. "sudo cpan File::HomeDir"
 4. "sudo cpan Moose"
-5. Install Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/zips/Unitex3.0beta.zip)
+5. "sudo cpan IPC::Run3"
+6. "sudo cpan Parallel::ForkManager"
+6. Install Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/zips/Unitex3.0beta.zip)
 
 **Quick Start**
 
