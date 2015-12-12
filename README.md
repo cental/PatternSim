@@ -7,7 +7,7 @@ A tool for calculation semantic similarity between words from a text corpus base
 - This tool implements the extraction method described in these papers: 
 	- Panchenko A., Morozova O., Naets H. “A Semantic Similarity Measure Based on Lexico-Syntactic Patterns.” In Proceedings of the 11th Conference on Natural Language Processing (KONVENS 2012), — Vienna (Austria), 2012
 	- http://www.oegai.at/konvens2012/proceedings/23_panchenko12p/
-	- Kristina Sabirova, Artem Lukanin. Automatic Extraction of Hypernyms and Hyponyms from Russian Texts // В кн.: Supplementary Proceedings of the 3rd International Conference on Analysis of Images, Social Networks and Texts (AIST 2014) / Ed. by D. I. Ignatov, M. Y. Khachay, A. Panchenko, N. Konstantinova, R. Yavorsky, U. Dmitry. Vol. 1197: Supplementary Proceedings of AIST 2014. CEUR-WS.org, 2014. С. 35-40.
+	- Kristina Sabirova, Artem Lukanin. Automatic Extraction of Hypernyms and Hyponyms from Russian Texts // Supplementary Proceedings of the 3rd International Conference on Analysis of Images, Social Networks and Texts (AIST 2014) / Ed. by D. I. Ignatov, M. Y. Khachay, A. Panchenko, N. Konstantinova, R. Yavorsky, D. Ustalov. Vol. 1197: Supplementary Proceedings of AIST 2014. CEUR-WS.org, 2014. С. 35-40.
 	- http://ceur-ws.org/Vol-1197/paper6.pdf
 - A demo of the extraction results provided with this method can be accessed here: http://serelex.cental.be/
 - Related repositories: 
@@ -122,6 +122,26 @@ Here are some corpora which you may use with this tool:
 - For even bigger corpora use ukWaC and WaCkypedia: http://wacky.sslmit.unibo.it/doku.php?id=corpora
 - Use DBPedia dump of Wikipedia: http://wiki.dbpedia.org/Downloads
 - Use a corpus of your own
+
+**Russian morphological dictionary**
+
+The Russian dictionary in this repository is an extract of the Russian computational morphological dictionary developed at CIS, Munich. This extract contains about 15% of the original dictionary (the most frequent lemmata). The whole dictionary actually contains 140,000 simple entries (= 2.7 million distinct forms), 166,000 simple proper nouns (= 900,000 distinct forms) and 1800 compound words.
+
+If you want to use the full version of the lexicon, please contact: 
+
+    Sebastian Nagel
+    CIS
+    Oettingenstr. 67
+    80538 München
+    Germany
+    wastl@cis.uni-muenchen.de
+    http://www.cis.uni-muenchen.de
+
+For additional information see: 
+
+Nagel, Sebastian 2002: Formenbildung im Russischen. Formale Beschreibung und Automatisierung für das CISLEX-Wörterbuchsystem (http://www.cis.uni-muenchen.de/~wastl/pub/ruslex.pdf)
+
+For a short description (in German), see http://www.cis.uni-muenchen.de/~wastl/pub/ruslexUnitex.pdf
 
 rank 
 ---------------
