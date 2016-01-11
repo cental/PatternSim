@@ -25,7 +25,7 @@ patternsim
 A tool for extraction of raw extraction counts with lexico-syntactic patterns. 
 
 **Requirements**
-- Perl 5.14.x
+- Perl 5.14.x or higher
 - Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/)
 
 **Installation on Ubuntu 12.04**
