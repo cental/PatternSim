@@ -1,0 +1,14 @@
+requires 'Getopt::Long';
+requires 'Config::General';
+requires 'Pod::Usage';
+requires 'File::HomeDir';
+requires 'File::Temp';
+requires 'IPC::Run3';
+requires 'File::Spec::Functions';
+requires 'File::Basename';
+requires 'Encode';
+requires 'Data::Dumper';
+requires 'Log::Message::Simple';
+requires 'Moose';
+requires 'Carp';
+requires 'IO::File';
