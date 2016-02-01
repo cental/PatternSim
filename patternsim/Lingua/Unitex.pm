@@ -7,7 +7,7 @@ package Lingua::Unitex;
 use strict;
 use warnings;
 use Moose;
-use IPC::Run3;
+use IPC::Run qw( run timeout);
 use Carp;
 use Log::Message::Simple qw[msg error debug carp croak cluck confess];
 local $Log::Message::Simple::DEBUG_FH = \*STDERR;
@@ -96,7 +96,14 @@ sub _toollogger {
 
     my ( $out, $err );
     debug( "EXECUTE: " . join( " ", @$command ), $self->debug_log );
-    run3( $command, \undef, \$out, \$err, { return_if_system_error => 1 } );
+    eval { 
+      run( $command, \undef, \$out, \$err, timeout(900) );
+    };
+    if ($@) {
+	    #return( 666, '', 'IPC::Run timeout' );
+    }
+#    run3( $command, \undef, \undef, \undef, { return_if_system_error => 1 } );
+#     system(@$command);
 
     my $error_code = $?;
     debug( "ERROR CODE:$error_code", $self->debug_log );
@@ -267,9 +274,13 @@ sub _get_unitex_toollogger {
     }
 
     # test if UnitexToolLogger returns a 0 value
-    run3( $unitex_path, \undef, \undef, \undef,
-        { return_if_system_error => 1 } );
-    if ( $? != 0 ) {
+    my @command = ($unitex_path);
+    my ($in, $out, $err);
+    eval {
+      run( \@command, \$in, \$out, \$err );
+    };
+    if ($@) {
+    #if ( $? != 0 ) {
         my $err_msg = "$unitex_path returns the error code $?";
         error( $err_msg, $self->error_log );
         return;
@@ -288,5 +299,7 @@ sub _get_os {
     my $os = $os{$^O} || 'Unix';
     return $os;
 }
+
+__PACKAGE__->meta->make_immutable;
 
 1;

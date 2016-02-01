@@ -9,6 +9,7 @@ requires 'File::Spec::Functions';
 requires 'File::Temp';
 requires 'Getopt::Long';
 requires 'IO::File';
+requires 'IPC::Run';
 requires 'IPC::Run3';
 requires 'Log::Message::Simple';
 requires 'Moose';
