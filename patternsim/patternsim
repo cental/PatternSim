@@ -63,7 +63,7 @@ my $result = GetOptions(
     'vocabulary|vocab|v=s'  => \$opts->{vocabulary},
     'output-dir|output|o=s' => \$opts->{output_dir},
     'unitex=s'              => \$opts->{unitex_dir},
-    'language|l=s'          => \$opts->{language},
+    'language|l:s'          => \$opts->{language},
     'workers|w:i'           => \$opts->{workers_nb},
     'debug'                 => \$opts->{debug},
     'verbose|v'             => \$opts->{verbose},
@@ -175,6 +175,7 @@ msg("Storing temporary files in '". $config{corpora}->{temp_dir} ."'",$verbose);
 msg("Storing workers results in '". $config{parallel_manager}->{temp_dir} ."'",$verbose);
 
 
+
 #----------------------------------------------------------------------
 # Check and select language
 #----------------------------------------------------------------------
@@ -187,7 +188,16 @@ if( not $config{languages}->{ $opts->{language} }) {
   exit(4);
 }
 
-msg("Language selected : " . $opts->{language}, $verbose);
+msg("Language selected: " . $opts->{language}, $verbose);
+
+#----------------------------------------------------------------------
+# overwrite number of workers from config
+#----------------------------------------------------------------------
+if ( not $opts->{workers_nb} ) {
+  $opts->{workers_nb} = $config{parallel_manager}->{workers_nb};
+}
+msg("Number of workers: " . $opts->{workers_nb}, $verbose);
+
 
 
 #----------------------------------------------------------------------
@@ -272,7 +282,7 @@ my $relations_np = {};                        # noun phrases relations
 #----------------------------------------------------------------------
 
 my $temp_dir    = $config{'parallel_manager'}->{'temp_dir'};
-my $workers_nb  = $config{'parallel_manager'}->{'workers_nb'};
+my $workers_nb  = $opts->{workers_nb};
 my $workers_ttl = $config{'parallel_manager'}->{'workers_time_to_live'};
 
 
