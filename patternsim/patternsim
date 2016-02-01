@@ -128,8 +128,16 @@ if ( not -e $patternsimrc ) {
         'corpora'          => {
             'split_at_size' => 100_000, # in characters
             'temp_dir'      => "$patternsim_dir/corpus_temp",
-        }
+        },
+        languages          => {
+            'en' => {
+                'unitex_language_name' => 'English',
+                'lexical_resources'    => 'share/Resources/English/Dela/*.bin',
+                'main_fst2_graph'      => 'share/Resources/English/Graphs/hypernymy/hypernym_main.fst2',
+            },
+        },
     };
+
     my $config = Config::General->new($config_data);
     $config->save_file($patternsimrc);
 
@@ -152,7 +160,7 @@ msg("Storing workers results in '". $config{parallel_manager}->{temp_dir} ."'",$
 #----------------------------------------------------------------------
 
 my $unitex = Lingua::Unitex->new(
-    language    => 'English',
+    language    => $config{languages}->{en}->{unitex_language_name},
     unitex_dir  => $opts->{unitex_dir},
     verbose_log => $verbose,
     debug_log   => $debug,
@@ -283,10 +291,10 @@ foreach my $file (@splited_files) {
     $unicorpus->apply_graph_in_replace_mode;
     $unicorpus->tokenize;
     
-    my @lexical_resources = glob( $script_dir . 'share/Resources/English/Dela/*.bin' );
+    my @lexical_resources = glob( $script_dir . $config{languages}->{en}->{lexical_resources} );
     
     $unicorpus->apply_lexical_ressources( \@lexical_resources );
-    my $res = $unicorpus->apply_graph( $script_dir . 'share/Resources/English/Graphs/hypernymy/hypernym_main.grf' );
+    my $res = $unicorpus->apply_graph( $script_dir . $config{languages}->{en}->{main_fst2_graph} );
 
      $pm->finish(1) if not defined $res;
      
