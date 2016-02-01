@@ -61,6 +61,7 @@ my $result = GetOptions(
     'vocabulary|vocab|v=s'  => \$opts->{vocabulary},
     'output-dir|output|o=s' => \$opts->{output_dir},
     'unitex=s'              => \$opts->{unitex_dir},
+    'language|l=s'          => \$opts->{language},
     'workers|w:i'           => \$opts->{workers_nb},
     'debug'                 => \$opts->{debug},
     'verbose|v'             => \$opts->{verbose},
@@ -72,7 +73,8 @@ $opts->{corpora} = [@ARGV];
 
 if ( $opts->{debug} ) {
   msg("debug mode activated",1);
-  $debug = 1;
+  $debug   = 1;
+  $verbose = 1;
 }
 if ( $opts->{verbose} ) {
   msg("verbose mode activated",1);
@@ -135,7 +137,14 @@ if ( not -e $patternsimrc ) {
                 'lexical_resources'    => 'share/Resources/English/Dela/*.bin',
                 'main_fst2_graph'      => 'share/Resources/English/Graphs/hypernymy/hypernym_main.fst2',
             },
+            'ru' => {
+                'unitex_language_name' => 'Russian',
+                'lexical_resources'    => 'share/Resources/Russian/Dela/*.bin',
+                'main_fst2_graph'      => 'share/Resources/Russian/Graphs/hypernymy/hypernym_main.fst2',
+   
+            },
         },
+        default_language => 'en',
     };
 
     my $config = Config::General->new($config_data);
@@ -155,12 +164,28 @@ my %config = $config->getall();
 msg("Storing temporary files in '". $config{corpora}->{temp_dir} ."'",$verbose);
 msg("Storing workers results in '". $config{parallel_manager}->{temp_dir} ."'",$verbose);
 
+
+#----------------------------------------------------------------------
+# Check and select language
+#----------------------------------------------------------------------
+if ( not $opts->{language} ) {
+  $opts->{language} = $config{default_language};
+}
+
+if( not $config{languages}->{ $opts->{language} }) {
+  error("Language '" . $opts->{language}  . "' is not a valid language" ,$error);
+  exit(3);
+}
+
+msg("Language selected : " . $opts->{language}, $verbose);
+
+
 #----------------------------------------------------------------------
 # New Unitex instance
 #----------------------------------------------------------------------
 
 my $unitex = Lingua::Unitex->new(
-    language    => $config{languages}->{en}->{unitex_language_name},
+    language    => $config{languages}->{ $opts->{language} }->{unitex_language_name},
     unitex_dir  => $opts->{unitex_dir},
     verbose_log => $verbose,
     debug_log   => $debug,
@@ -291,10 +316,10 @@ foreach my $file (@splited_files) {
     $unicorpus->apply_graph_in_replace_mode;
     $unicorpus->tokenize;
     
-    my @lexical_resources = glob( $script_dir . $config{languages}->{en}->{lexical_resources} );
+    my @lexical_resources = glob( $script_dir . $config{languages}->{ $opts->{language} }->{lexical_resources} );
     
     $unicorpus->apply_lexical_ressources( \@lexical_resources );
-    my $res = $unicorpus->apply_graph( $script_dir . $config{languages}->{en}->{main_fst2_graph} );
+    my $res = $unicorpus->apply_graph( $script_dir . $config{languages}->{ $opts->{language} }->{main_fst2_graph} );
 
      $pm->finish(1) if not defined $res;
      
