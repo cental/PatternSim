@@ -3,8 +3,6 @@
 #    NAME: patternsim
 #======================================================================
 #  AUTHOR: Hubert Naets <hubert.naets@uclouvain.be>
-#    DATE: 2012-08-23
-# VERSION: 0.1
 #======================================================================
 # USAGE: perl ./pattersim
 #======================================================================
@@ -13,31 +11,28 @@ use warnings;
 use utf8;
 
 use Getopt::Long;
-use Params::Check;    #TODO: remplacer la validation des paramètres par ce module
 use Config::General;
 use Pod::Usage;
 use File::HomeDir;
 use File::Temp;
+use Parallel::ForkManager;
 use IPC::Run3;
 use File::Spec::Functions qw(rel2abs);
 use File::Basename qw(dirname);
 use Encode;
-
 use Data::Dumper;
 
-# local $Data::Dumper::Pair     = ':';
-# local $Data::Dumper::Sortkeys = 1;
-# local $Data::Dumper::Indent   = 1;
-# local $Data::Dumper::Purity   = 0;
-# local $Data::Dumper::Pad      = '  |';
-# local $Data::Dumper::Terse    = 1;
+
 
 # Log facility
 use Log::Message::Simple qw[msg error debug carp croak cluck confess];
-local $Log::Message::Simple::DEBUG_FH = \*STDERR;
+local $Log::Message::Simple::MSG_FH     = \*STDERR;
+local $Log::Message::Simple::ERROR_FH   = \*STDERR;
+local $Log::Message::Simple::DEBUG_FH   = \*STDERR;
 
 use Lingua::Unitex;
 
+# Default log values
 my $verbose = 0;
 my $debug   = 0;
 my $error   = 1;
@@ -66,16 +61,23 @@ my $result = GetOptions(
     'vocabulary|vocab|v=s'  => \$opts->{vocabulary},
     'output-dir|output|o=s' => \$opts->{output_dir},
     'unitex=s'              => \$opts->{unitex_dir},
+    'workers|w:i'           => \$opts->{workers_nb},
     'debug'                 => \$opts->{debug},
-    'verbose'               => \$opts->{verbose},
+    'verbose|v'             => \$opts->{verbose},
     'help|h'                => \$opts->{help},
     'man'                   => \$opts->{man},
 );
 
 $opts->{corpora} = [@ARGV];
 
-$debug   = 1 if $opts->{debug}   and $opts->{debug} == 1;
-$verbose = 1 if $opts->{verbose} and $opts->{verbose} == 1;
+if ( $opts->{debug} ) {
+  msg("debug mode activated",1);
+  $debug = 1;
+}
+if ( $opts->{verbose} ) {
+  msg("verbose mode activated",1);
+  $verbose = 1;
+}
 
 debug( "Program arguments are:\n" . Dumper($opts), $debug );
 
@@ -117,10 +119,15 @@ my $patternsimrc = "$patternsim_dir/patternsimrc";
 if ( not -e $patternsimrc ) {
 
     my $config_data = {
-        'unitex'  => { unitex_dir => undef, user_dir => undef },
-        'corpora' => {
-            split_at_size => 52428800,
-            temp_dir      => "$patternsim_dir/corpus_temp"
+        'unitex'           => { unitex_dir => undef, user_dir => undef },
+        'parallel_manager' => {
+          'workers_nb'            => 2,
+          'temp_dir'              => "$patternsim_dir/parallel_temp",
+          'workers_time_to_live'  => 600, # worker will be killed after this time (in seconds)
+        },
+        'corpora'          => {
+            'split_at_size' => 100_000, # in characters
+            'temp_dir'      => "$patternsim_dir/corpus_temp",
         }
     };
     my $config = Config::General->new($config_data);
@@ -131,13 +138,18 @@ if ( not -e $patternsimrc ) {
 
 }
 
+
+msg( "Using configuration file '$patternsimrc'", $verbose );
+
 my $config = Config::General->new( $patternsim_dir . '/patternsimrc' );
 my %config = $config->getall();
 
+msg("Storing temporary files in '". $config{corpora}->{temp_dir} ."'",$verbose);
+msg("Storing workers results in '". $config{parallel_manager}->{temp_dir} ."'",$verbose);
+
 #----------------------------------------------------------------------
-# first usage: download and compile Unitex if needed
+# New Unitex instance
 #----------------------------------------------------------------------
-# TODO
 
 my $unitex = Lingua::Unitex->new(
     language    => 'English',
@@ -153,7 +165,7 @@ my $unitex = Lingua::Unitex->new(
 #----------------------------------------------------------------------
 my @splited_files = ();
 
-mkdir $config{corpora}->{temp_dir};
+mkdir $config{corpora}->{temp_dir} if not -e $config{corpora}->{temp_dir};
 
 my $pattern = 'corpus_XXXXXXXXXXXXXXXX';
 my $suffix  = '_utf16le.txt';
@@ -215,102 +227,353 @@ my $relations_np = {};                        # noun phrases relations
 #----------------------------------------------------------------------
 # Preprocess Corpus with Unitex Tools
 #----------------------------------------------------------------------
+
+my $temp_dir    = $config{'parallel_manager'}->{'temp_dir'};
+my $workers_nb  = $config{'parallel_manager'}->{'workers_nb'};
+my $workers_ttl = $config{'parallel_manager'}->{'workers_time_to_live'};
+
+
+mkdir $config{parallel_manager}->{temp_dir} if not -e $config{parallel_manager}->{temp_dir};
+
+my $pm = Parallel::ForkManager->new( $workers_nb, $temp_dir );
+
+my $nb_files_to_process = @splited_files;
+my $nb_files_processed = 0;
+
+our %workers;
+
+sub dismiss_hung_workers {
+  while (my ($pid, $started_at) = each %workers) {
+    msg( "PID RUN ON WAIT $pid", $verbose);
+    if (time() - $started_at > $workers_ttl ) {
+      kill TERM => $pid;
+      delete $workers{$pid};
+      msg( "FORK TIMEOUT: $pid - started at $started_at", $verbose );
+    }
+  }
+}
+
+$pm->run_on_start(sub { my $pid = shift; $workers{$pid} = time(); });
+$pm->run_on_finish(    # called BEFORE the first call to start()
+    sub {
+        my ( $pid, $exit_code, $ident, $exit_signal, $core_dump,
+            $data_structure_reference ) = @_;
+        delete $workers{$pid};
+        $nb_files_processed++;
+        msg( '['. localtime . "] Processed: #$nb_files_processed / $nb_files_to_process files", $verbose );
+	if (defined($data_structure_reference)) {
+          push @concord, @{$data_structure_reference->{concord}};
+          $dico->merge_with( $data_structure_reference->{dico});
+
+          foreach my $tok ( keys %{$data_structure_reference->{tokens_by_freq}} ) {
+            $corpus_words_freq->{$tok} += $data_structure_reference->{tokens_by_freq}->{$tok};
+          }
+	}
+    }
+);
+
+msg( "To process: #$nb_files_to_process files", $verbose );
+
 foreach my $file (@splited_files) {
+    $pm->start and next;
+    
     my $unicorpus = $unitex->corpus( 'filename' => $file );
     $unicorpus->normalize;
     $unicorpus->apply_graph_in_merge_mode;
     $unicorpus->apply_graph_in_replace_mode;
     $unicorpus->tokenize;
-    $unicorpus->apply_lexical_ressources;
-    $unicorpus->apply_graph( $script_dir . 'share/Resources/English/Graphs/hypernymy/hypernym_main.grf' );
+    
+    my @lexical_resources = glob( $script_dir . 'share/Resources/English/Dela/*.bin' );
+    
+    $unicorpus->apply_lexical_ressources( \@lexical_resources );
+    my $res = $unicorpus->apply_graph( $script_dir . 'share/Resources/English/Graphs/hypernymy/hypernym_main.grf' );
 
-    $dico->merge_with( $unicorpus->get_dictionary() );
-    push @concord, $unicorpus->get_last_concord();
+     $pm->finish(1) if not defined $res;
+     
+     my $dico = $unicorpus->get_dictionary();
+
+    #$dico->merge_with( $unicorpus->get_dictionary() );
+    my @concord        = $unicorpus->get_last_concord();
     my $tokens_by_freq = $unicorpus->get_tokens_by_frequency();
 
-    foreach my $tok ( keys %$tokens_by_freq ) {
-        $corpus_words_freq->{$tok} += $tokens_by_freq->{$tok};
-    }
     $unicorpus->delete_all_files();
-}
-
-#----------------------------------------------------------------------
-# Extract relations
-#----------------------------------------------------------------------
-foreach my $conc (@concord) {
-
-    #----------------------------------------------------------------------
-    # get tokens and relation types in [...]
-    #----------------------------------------------------------------------
-    $conc = lc $conc;
-    ( my $rule ) = $conc =~ /\[pattern=(\d+)\]/;
-    my @tokens_types = ();
-    while ( $conc =~ /\[(.+?)\]=(.+?)\}/g ) {
-        push @tokens_types, { token => $1, type => $2 };
-    }
-    map { $_->{token} =~ s/^\s+//; $_->{token} =~ s/\s+$// } @tokens_types;
-    my @tokens = map { $_->{token} } @tokens_types;
-
-    #----------------------------------------------------------------------
-    # lemmatize tokens
-    #----------------------------------------------------------------------
-    my @lemmas = _lemmatize( $dico, $corpus_words_freq, @tokens );
-
-    #----------------------------------------------------------------------
-    # record relation, relation type and rule number
-    #----------------------------------------------------------------------
-    while ( @lemmas > 1 ) {
-        my $vedette            = shift @lemmas;
-        my $vedette_token_type = shift @tokens_types;
-        for ( my $i = 0 ; $i < @lemmas ; $i++ ) {
-            my $lemma      = $lemmas[$i];
-            my $token_type = $tokens_types[$i];
-            $relations->{$vedette}->{$lemma}->{rules}->{$rule}++;
-            $relations->{$lemma}->{$vedette}->{rules}->{$rule}++;
-            
-            if ( $vedette_token_type->{type} eq "hypo" and $token_type->{type} eq "hyper" ) {
-            $relations->{$vedette}->{$lemma}->{types}->{'hypo'}++;
-                $relations->{$vedette}->{$lemma}->{types}->{'hyper_hypo'}++;
-            }
-            elsif ( $vedette_token_type->{type} eq "hyper" and $token_type->{type} eq "hypo" ) {
-            $relations->{$vedette}->{$lemma}->{types}->{'hyper'}++;
-                $relations->{$vedette}->{$lemma}->{types}->{'hyper_hypo'}++;
-            }
-
-            elsif ( $vedette_token_type->{type} eq "hypo" and $token_type->{type} eq "hypo" ) {
-                $relations->{$vedette}->{$lemma}->{types}->{'cohypo'}++;
-            }
-            elsif ( $vedette_token_type->{type} eq "syno" and $token_type->{type} eq "syno" ) {
-                $relations->{$vedette}->{$lemma}->{types}->{'syno'}++;
-            }
-            else {
-                print STDERR "unknown relation type: ", $vedette_token_type->{type}, '(', $vedette, ')', '-', $token_type->{type}, '(', $lemma, ')', "\n";
-            }
+    $pm->finish(
+        0,
+        {
+            dico           => $dico,
+            tokens_by_freq => $tokens_by_freq,
+            concord        => \@concord
         }
-    }
-
-    #----------------------------------------------------------------------
-    # get noun phrases in {...}
-    #----------------------------------------------------------------------
-    my @np = $conc =~ /\{(.+?)=\pL+\}/g;
-    map { $_ =~ s/[[\]]//g; $_ =~ s/^\s+//; $_ =~ s/\s+$// } @np;
-
-    #----------------------------------------------------------------------
-    # record np relation and rule number
-    #----------------------------------------------------------------------
-    while ( @np > 1 ) {
-        my $vedette = shift @np;
-        foreach my $token (@np) {
-            $relations_np->{$vedette}->{$token}->{$rule}++;
-            $relations_np->{$token}->{$vedette}->{$rule}++;
-        }
-    }
+    );
 }
+$pm->wait_all_children;
 
 #----------------------------------------------------------------------
-# Save results
+# Create output dir
 #----------------------------------------------------------------------
 mkdir $opts->{output_dir};    # create output dir
+
+#----------------------------------------------------------------------
+# Save concordances
+#----------------------------------------------------------------------
+my $concord_fh = IO::File->new( $opts->{output_dir} . '/' . 'concord.txt', 'w' );
+binmode( $concord_fh, ':encoding(utf8)' );
+
+foreach my $conc (@concord) {
+
+    print $concord_fh $conc, "\n";
+
+    my @concord_relations = ();
+
+    #     print "CONC: $conc\n";
+
+    ( my $rule_nb ) = $conc =~ /\[PATTERN=(\d+)\]/;    # [PATTERN=9]
+    my @multiwords_with_tags = $conc =~ /\{.+?=[A-Z]+\}/g;    # {[ biopiraterie]=SYNO}
+
+    foreach my $mutiword_with_tags (@multiwords_with_tags) {
+
+        # relation (hypo, hyper, syno, etc.)
+        ( my $relation = $mutiword_with_tags ) =~ s/\{.+?=([A-Z]+)\}/$1/;
+
+        # multiword without tags
+        ( my $multiword = $mutiword_with_tags ) =~ s/^\{(.+?)=[A-Z]+\}$/$1/;
+        $multiword =~ s/\[|\]//g;
+        trim($multiword);
+
+        # simpleword without tags
+        ( my $simpleword = $mutiword_with_tags ) =~ s/^\{(.+?)=[A-Z]+\}$/$1/;
+        $simpleword =~ s/^.*\[(.+)\].*$/$1/g;
+        trim($simpleword);
+
+        # lemmatize simpleword
+        my $simpleword_lemma = _lemmatize( $dico, $corpus_words_freq, $simpleword );
+
+        #       print "MULTIWORD W. TAG: ", $mutiword_with_tags, "\n";
+        #       print "   RELATION:", $relation, "\n";
+        #       print "  MULTIWORD:", $multiword, "\n";
+        #	print " SIMPLEWORD:", $simpleword, "\n";
+        #	print "      LEMMA:", $simpleword_lemma, "\n";
+
+        push(
+            @concord_relations,
+            {
+                multiword  => $multiword,
+                simpleword => $simpleword,
+                lemma      => $simpleword_lemma,
+                relation   => $relation,
+                rule       => $rule_nb
+            }
+        );
+    }
+
+    for ( my $i = 0 ; $i < @concord_relations ; $i++ ) {
+        my $concord_relation1 = $concord_relations[$i];
+        for ( my $j = $i + 1 ; $j < @concord_relations ; $j++ ) {
+            my $concord_relation2 = $concord_relations[$j];
+
+            my %saved_relations = ();    # if the relation was previously saved, do not save them another time.
+
+            # multiwords
+            next
+              if not defined $concord_relation1->{multiword}
+              or not defined $concord_relation2->{multiword}
+              or $concord_relation1->{multiword} eq ""
+              or $concord_relation2->{multiword} eq ""
+              or $concord_relation1->{multiword} eq $concord_relation2->{multiword};
+
+            $saved_relations{ $concord_relation1->{multiword} . "\t" . $concord_relation2->{multiword} } = 1;
+            $saved_relations{ $concord_relation2->{multiword} . "\t" . $concord_relation1->{multiword} } = 1;
+
+            $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{multiword} }->{rules}->{ $concord_relation1->{rule} }++;
+            $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{multiword} }->{rules}->{ $concord_relation1->{rule} }++;
+
+            if ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPER" ) {
+                $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{multiword} }->{types}->{'hypo'}++;
+                $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{multiword} }->{types}->{'hyper_hypo'}++;
+                $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{multiword} }->{types}->{'hyper'}++;
+                $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{multiword} }->{types}->{'hyper_hypo'}++;
+            }
+            elsif ( $concord_relation1->{relation} eq "HYPER" and $concord_relation2->{relation} eq "HYPO" ) {
+                $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{multiword} }->{types}->{'hyper'}++;
+                $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{multiword} }->{types}->{'hyper_hypo'}++;
+                $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{multiword} }->{types}->{'hypo'}++;
+                $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{multiword} }->{types}->{'hyper_hypo'}++;
+            }
+
+            elsif ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPO" ) {
+                $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{multiword} }->{types}->{'cohypo'}++;
+                $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{multiword} }->{types}->{'cohypo'}++;
+            }
+            elsif ( $concord_relation1->{relation} eq "SYNO" and $concord_relation2->{relation} eq "SYNO" ) {
+                $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{multiword} }->{types}->{'syno'}++;
+                $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{multiword} }->{types}->{'syno'}++;
+            }
+            else {
+                msg("unknown relation type: " . $concord_relation1->{relation} . '(' . $concord_relation1->{multiword} . ')'. '-'. $concord_relation2->{relation} . '(' . $concord_relation2->{multiword} . ')', $error);
+            }
+
+            # lemma
+            next
+              if not defined $concord_relation1->{lemma}
+              or not defined $concord_relation2->{lemma}
+              or $concord_relation1->{lemma} eq ""
+              or $concord_relation2->{lemma} eq ""
+              or $concord_relation1->{lemma} eq $concord_relation2->{lemma};
+
+            if ( not exists $saved_relations{ $concord_relation1->{lemma} . "\t" . $concord_relation2->{lemma} } ) {
+                $saved_relations{ $concord_relation1->{lemma} . "\t" . $concord_relation2->{lemma} } = 1;
+
+                $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{lemma} }->{rules}->{ $concord_relation1->{rule} }++;
+
+                if ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPER" ) {
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{lemma} }->{types}->{'hypo'}++;
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{lemma} }->{types}->{'hyper_hypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "HYPER" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{lemma} }->{types}->{'hyper'}++;
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{lemma} }->{types}->{'hyper_hypo'}++;
+                }
+
+                elsif ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{lemma} }->{types}->{'cohypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "SYNO" and $concord_relation2->{relation} eq "SYNO" ) {
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{lemma} }->{types}->{'syno'}++;
+                }
+                else {
+                    msg("unknown relation type: " . $concord_relation1->{relation} . '(' . $concord_relation1->{multiword} . ')' . '-' . $concord_relation2->{relation} . '(' . $concord_relation2->{multiword} . ')', $error);
+                }
+
+            }
+
+            if ( not exists $saved_relations{ $concord_relation2->{lemma} . "\t" . $concord_relation1->{lemma} } ) {
+                $saved_relations{ $concord_relation2->{lemma} . "\t" . $concord_relation1->{lemma} } = 1;
+
+                $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{lemma} }->{rules}->{ $concord_relation1->{rule} }++;
+
+                if ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPER" ) {
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{lemma} }->{types}->{'hyper'}++;
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{lemma} }->{types}->{'hyper_hypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "HYPER" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{lemma} }->{types}->{'hypo'}++;
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{lemma} }->{types}->{'hyper_hypo'}++;
+                }
+
+                elsif ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{lemma} }->{types}->{'cohypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "SYNO" and $concord_relation2->{relation} eq "SYNO" ) {
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{lemma} }->{types}->{'syno'}++;
+                }
+                else {
+                    msg("unknown relation type: " . $concord_relation1->{relation} . '(' . $concord_relation1->{multiword} . ')' . '-' . $concord_relation2->{relation} . '(' . $concord_relation2->{multiword} . ')', $error);
+                }
+            }
+
+            if ( not exists $saved_relations{ $concord_relation1->{lemma} . "\t" . $concord_relation2->{multiword} } ) {
+                $saved_relations{ $concord_relation1->{lemma} . "\t" . $concord_relation2->{multiword} } = 1;
+
+                $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{multiword} }->{rules}->{ $concord_relation1->{rule} }++;
+
+                if ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPER" ) {
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{multiword} }->{types}->{'hypo'}++;
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{multiword} }->{types}->{'hyper_hypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "HYPER" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{multiword} }->{types}->{'hyper'}++;
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{multiword} }->{types}->{'hyper_hypo'}++;
+                }
+
+                elsif ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{multiword} }->{types}->{'cohypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "SYNO" and $concord_relation2->{relation} eq "SYNO" ) {
+                    $relations->{ $concord_relation1->{lemma} }->{ $concord_relation2->{multiword} }->{types}->{'syno'}++;
+                }
+                else {
+                    msg("unknown relation type: " . $concord_relation1->{relation} . '(' . $concord_relation1->{multiword} . ')' . '-' . $concord_relation2->{relation} . '(' . $concord_relation2->{multiword} . ')', $error);
+                }
+            }
+            if ( not exists $saved_relations{ $concord_relation2->{lemma} . "\t" . $concord_relation1->{multiword} } ) {
+                $saved_relations{ $concord_relation2->{lemma} . "\t" . $concord_relation1->{multiword} } = 1;
+
+                $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{multiword} }->{rules}->{ $concord_relation1->{rule} }++;
+
+                if ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPER" ) {
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{multiword} }->{types}->{'hyper'}++;
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{multiword} }->{types}->{'hyper_hypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "HYPER" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{multiword} }->{types}->{'hypo'}++;
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{multiword} }->{types}->{'hyper_hypo'}++;
+                }
+
+                elsif ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{multiword} }->{types}->{'cohypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "SYNO" and $concord_relation2->{relation} eq "SYNO" ) {
+                    $relations->{ $concord_relation2->{lemma} }->{ $concord_relation1->{multiword} }->{types}->{'syno'}++;
+                }
+                else {
+                    msg("unknown relation type: " .  $concord_relation1->{relation} . '(' .  $concord_relation1->{multiword} . ')' . '-'. $concord_relation2->{relation} . '(' . $concord_relation2->{multiword} . ')', $error);
+                }
+            }
+
+            if ( not exists $saved_relations{ $concord_relation1->{multiword} . "\t" . $concord_relation2->{lemma} } ) {
+                $saved_relations{ $concord_relation1->{multiword} . "\t" . $concord_relation2->{lemma} } = 1;
+
+                $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{lemma} }->{rules}->{ $concord_relation1->{rule} }++;
+
+                if ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPER" ) {
+                    $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{lemma} }->{types}->{'hypo'}++;
+                    $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{lemma} }->{types}->{'hyper_hypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "HYPER" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{lemma} }->{types}->{'hyper'}++;
+                    $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{lemma} }->{types}->{'hyper_hypo'}++;
+                }
+
+                elsif ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{lemma} }->{types}->{'cohypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "SYNO" and $concord_relation2->{relation} eq "SYNO" ) {
+                    $relations->{ $concord_relation1->{multiword} }->{ $concord_relation2->{lemma} }->{types}->{'syno'}++;
+                }
+                else {
+                    msg("unknown relation type: " . $concord_relation1->{relation} . '(' . $concord_relation1->{multiword} . ')' . '-' . $concord_relation2->{relation} . '(' . $concord_relation2->{multiword} . ')', $error);
+                }
+            }
+
+            if ( not exists $saved_relations{ $concord_relation2->{multiword} . "\t" . $concord_relation1->{lemma} } ) {
+                $saved_relations{ $concord_relation2->{multiword} . "\t" . $concord_relation1->{lemma} } = 1;
+
+                $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{lemma} }->{rules}->{ $concord_relation1->{rule} }++;
+
+                if ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPER" ) {
+                    $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{lemma} }->{types}->{'hyper'}++;
+                    $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{lemma} }->{types}->{'hyper_hypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "HYPER" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{lemma} }->{types}->{'hypo'}++;
+                    $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{lemma} }->{types}->{'hyper_hypo'}++;
+                }
+
+                elsif ( $concord_relation1->{relation} eq "HYPO" and $concord_relation2->{relation} eq "HYPO" ) {
+                    $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{lemma} }->{types}->{'cohypo'}++;
+                }
+                elsif ( $concord_relation1->{relation} eq "SYNO" and $concord_relation2->{relation} eq "SYNO" ) {
+                    $relations->{ $concord_relation2->{multiword} }->{ $concord_relation1->{lemma} }->{types}->{'syno'}++;
+                }
+                else {
+                    msg("unknown relation type: " . $concord_relation1->{relation} . '(' . $concord_relation1->{multiword} . ')' . '-' . $concord_relation2->{relation} .  '(' . $concord_relation2->{multiword} . ')', $error);
+                }
+            }
+
+        }
+    }
+}
+$concord_fh->close;
 
 #----------------------------------------------------------------------
 # save pairs and pairs voc
@@ -320,15 +583,20 @@ my $pairs_voc_fh = IO::File->new( $opts->{output_dir} . '/' . 'pairs-voc.csv', '
 binmode( $pairs_fh,     ':encoding(utf8)' );
 binmode( $pairs_voc_fh, ':encoding(utf8)' );
 
+print $pairs_fh
+"form;related;syno;cohypo;hyper_hypo;hyper;hypo;sum;pattern1;pattern2;pattern3;pattern4;pattern5;pattern6;pattern7;pattern8;pattern9;pattern10;pattern11;pattern12;pattern13;pattern14;pattern15;pattern16;pattern17\n";
+print $pairs_voc_fh
+"form;related;syno;cohypo;hyper_hypo;hyper;hypo;sum;pattern1;pattern2;pattern3;pattern4;pattern5;pattern6;pattern7;pattern8;pattern9;pattern10;pattern11;pattern12;pattern13;pattern14;pattern15;pattern16;pattern17\n";
+
 foreach my $vedette ( sort keys %$relations ) {
     foreach my $related ( sort keys %{ $relations->{$vedette} } ) {
 
-        my @types = (0) x 5; # initialize tab @types with 5 elements at '0' #TODO
-        
+        my @types = (0) x 5;    # initialize tab @types with 5 elements at '0' #TODO
+
         my $i = 0;
         foreach my $type ( 'syno', 'cohypo', 'hyper_hypo', 'hyper', 'hypo' ) {
-          $types[$i] = $relations->{$vedette}->{$related}->{types}->{$type} if exists $relations->{$vedette}->{$related}->{types}->{$type} ;
-          $i++;
+            $types[$i] = $relations->{$vedette}->{$related}->{types}->{$type} if exists $relations->{$vedette}->{$related}->{types}->{$type};
+            $i++;
         }
 
         my $extractions = 0;
@@ -346,26 +614,6 @@ foreach my $vedette ( sort keys %$relations ) {
 }
 $pairs_fh->close;
 $pairs_voc_fh->close;
-
-#----------------------------------------------------------------------
-# save pairs np
-#----------------------------------------------------------------------
-my $pairs_np_fh = IO::File->new( $opts->{output_dir} . '/' . 'pairs-np.csv', 'w' );
-binmode $pairs_np_fh, ':encoding(utf8)';
-
-foreach my $vedette ( sort keys %$relations_np ) {
-    foreach my $related ( sort keys %{ $relations_np->{$vedette} } ) {
-        my $extractions = 0;
-        my @rules = (0) x ( 17 + 1 );    # initalize tab @rules with 18 elements at '0'
-        foreach my $rule ( keys %{ $relations_np->{$vedette}->{$related} } ) {
-            $rules[$rule] = $relations_np->{$vedette}->{$related}->{$rule};
-            $extractions += $relations_np->{$vedette}->{$related}->{$rule};
-        }
-        shift @rules;    # remove column 0;
-        print $pairs_np_fh $vedette, ';', $related . ';', $extractions, ';', join( ";", @rules ), "\n";
-    }
-}
-$pairs_np_fh->close;
 
 #----------------------------------------------------------------------
 #save lemma frequency
@@ -420,7 +668,11 @@ foreach my $form ( keys %$concord_tokens_freq ) {
 my $conc_freq_fh = IO::File->new( $opts->{output_dir} . '/' . 'conc-freq.csv', 'w' );
 binmode $conc_freq_fh, ':encoding(utf8)';
 
-foreach my $lemma ( sort { $concord_lemma_freq->{$b} <=> $concord_lemma_freq->{$a} } keys %$concord_lemma_freq ) {
+foreach my $lemma (
+    sort { $concord_lemma_freq->{$b} <=> $concord_lemma_freq->{$a} }
+    keys %$concord_lemma_freq
+  )
+{
     print $conc_freq_fh $lemma, ';', $concord_lemma_freq->{$lemma}, "\n";
 }
 
@@ -557,6 +809,13 @@ sub _is_valid_unitex_installation {
     return $result;
 }
 
+sub trim {
+    for ( my $i = 0 ; $i < @_ ; $i++ ) {
+        $_[$i] =~ s/^\s+//;
+        $_[$i] =~ s/\s+$//;
+    }
+}
+
 __DATA__
 
 =head1 NAME
@@ -596,9 +855,15 @@ to install the Unitex program automatically
 or if you want to specify the location
 of your Unitex main directory.
 
+=item --workers -w I<number_of_workers>
+
+Specify the number of parallel workers
+Workers will extract in parallel semantic relations. 
+A good number of workers will be the number of CPU cores minus 1.
+
 =item --output -o I<output_directory>
 
-Specify the output directory
+Specify the output directory.
 
 =item --verbose
 
@@ -615,7 +880,7 @@ Prints the manual page and exits.
 =item --verbose
 
 Activates the verbose mode. Explains all the processes.
-Outputs will be shown on stderr
+Outputs will be shown on stderr.
 
 
 =back
