@@ -10,6 +10,8 @@ use strict;
 use warnings;
 use utf8;
 
+our $VERSION = '0.3';
+
 use Getopt::Long;
 use Config::General;
 use Pod::Usage;
@@ -145,14 +147,13 @@ if ( not -e $patternsimrc ) {
             },
         },
         default_language => 'en',
+        version => $VERSION,
     };
 
     my $config = Config::General->new($config_data);
     $config->save_file($patternsimrc);
 
-    debug( "File '$patternsimrc' created", $debug );
     msg( "File '$patternsimrc' created", $verbose );
-
 }
 
 
@@ -160,6 +161,15 @@ msg( "Using configuration file '$patternsimrc'", $verbose );
 
 my $config = Config::General->new( $patternsim_dir . '/patternsimrc' );
 my %config = $config->getall();
+
+#----------------------------------------------------------------------
+# check if configuration file is up to date
+#----------------------------------------------------------------------
+if (not exists $config{version} or $config{version} ne $VERSION ) {
+  my $old_config_file = $config{version} // 'not available';
+  error("Your configuration file '$patternsimrc' need to be updated\n(actual version: $old_config_file - expected version : $VERSION)\nPlease, delete the '$patternsimrc' file and restart the program",$error);
+  exit(3); 
+}
 
 msg("Storing temporary files in '". $config{corpora}->{temp_dir} ."'",$verbose);
 msg("Storing workers results in '". $config{parallel_manager}->{temp_dir} ."'",$verbose);
@@ -174,7 +184,7 @@ if ( not $opts->{language} ) {
 
 if( not $config{languages}->{ $opts->{language} }) {
   error("Language '" . $opts->{language}  . "' is not a valid language" ,$error);
-  exit(3);
+  exit(4);
 }
 
 msg("Language selected : " . $opts->{language}, $verbose);
