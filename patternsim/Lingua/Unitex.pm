@@ -195,6 +195,14 @@ sub _get_replace_file {
         $self->user_dir . '/'
       . $self->language . '/'
       . 'Graphs/Preprocessing/Replace/Replace.grf';
+
+    if (not -e $replace_file) {
+        $replace_file =
+            $self->user_dir . '/'
+          . $self->language . '/'
+          . 'Graphs/Preprocessing/Replace/ReplaceTEI.grf';
+    }
+
     if ( not -e $replace_file ) {
         carp "Impossible to get the Replace.grf file";
         return;
