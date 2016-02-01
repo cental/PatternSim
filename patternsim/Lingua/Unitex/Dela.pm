@@ -32,6 +32,8 @@ sub add_file {
   while ( my $line = $fh->getline ) { 
     $line_nb++;
     $line =~ s/\x{feff}// if $line_nb == 1;
+
+    next if $line =~ /^\s*$/;
     
     my $data_line = &_parse_dela_line($line);
     my $form      = $data_line->{form};
@@ -135,7 +137,7 @@ sub _parse_dela_line {
     ( $result->{form}, $result->{lemma}, $result->{infos} ) =
       $line =~ /^(.+),(.*)\.(.+)$/;
 
-    $result->{lemma} = $result->{form} if $result->{lemma} eq '';
+    $result->{lemma} = $result->{form} if not defined $result->{lemma} or $result->{lemma} eq '';
     $result->{infos} = &_reorder_infos($result->{infos});
     $result->{line}  = $line;
     return $result;
