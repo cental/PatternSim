@@ -934,11 +934,11 @@ Specify the number of parallel workers
 Workers will extract in parallel semantic relations. 
 A good number of workers will be the number of CPU cores minus 1.
 
-==item --language -w I<language_id>
+=item --language -w I<language_id>
 
 Specify the current language
 
-==item --list-languages
+=item --list-languages
 
 Show all available languages (language_id and full name)
 
