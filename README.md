@@ -30,14 +30,9 @@ A tool for extraction of raw extraction counts with lexico-syntactic patterns.
 
 **Installation on Ubuntu 12.04**
 
-1. Install CPAN: "sudo cpan App::cpanminus"
-2. Install module "sudo cpan Config::General"
-3. "sudo cpan File::HomeDir"
-4. sudo cpan Moose
-5. sudo cpan IPC::Run3
-6. sudo cpan IPC::Run
-6. "sudo cpan Parallel::ForkManager"
-6. Install Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/zips/Unitex3.0beta.zip)
+1. Install Unitex 3.0beta (http://www-igm.univ-mlv.fr/~unitex/zips/Unitex3.0beta.zip)
+2. Install cpanm: "sudo cpan App::cpanminus"
+3. Install all dependencies: "sudo cpanm --installdeps ."
 
 **Quick Start**
 
@@ -52,29 +47,42 @@ patternsim [options] [corpus_file(s) ...]
 Usage:
     patternsim [options] [corpus_file(s) ...]
 
+      Mandatory options:
+        --unitex                 Unitex main directory
+        --output (-o)            output directory
+
       Options:
         --vocabulary (-v)        input vocabulary file
-        --output (-o)            output directory
-        --unitex                 Unitex main directory
+        --workers (-w)           number of workers
+        --language (-l)          language
+
+        --list-languages         list all available languages
 
         --verbose                verbose mode
         --help                   brief help message
         --man                    full documentation
 
 Options:
-    --vocabulary --vocab -v *vocabulary_file*
-            Specify the UTF-8 input vocabulary file (one word per line)
-
     --unitex *unitex_main_directory*
             Specify the Unitex main directory if you want to use your own
             Unitex installation (overwite the patternsim configuration file)
 
-            At first run, patternsim will ask you if you want to install the
-            Unitex program automatically or if you want to specify the
-            location of your Unitex main directory.
-
     --output -o *output_directory*
-            Specify the output directory
+            Specify the output directory.
+
+    --vocabulary --vocab -v *vocabulary_file*
+            Specify the UTF-8 input vocabulary file (one word per line)
+
+    --workers -w *number_of_workers*
+            Specify the number of parallel workers Workers will extract in
+            parallel semantic relations. A good number of workers will be
+            the number of CPU cores minus 1.
+
+    --language -w *language_id*
+            Specify the current language
+
+    --list-languages
+            Show all available languages (language_id and full name)
 
     --verbose
             Explains what is being done
@@ -86,11 +94,12 @@ Options:
 
     --verbose
             Activates the verbose mode. Explains all the processes. Outputs
-            will be shown on stderr
+            will be shown on stderr.
+
 
 **Example**
 
-./patternsim --unitex /home/sasha/Unitex3.0beta -v vocabulary.txt -o ./output corpus.txt
+./patternsim --unitex /home/user/Unitex3.0beta -v vocabulary.txt -o output corpus.txt
 
 The output of this command -- a set of files in the directory "./output":
 - *conc-freq.csv* -- a frequency list derived from a set of extraction concordances
