@@ -64,6 +64,7 @@ my $result = GetOptions(
     'output-dir|output|o=s' => \$opts->{output_dir},
     'unitex=s'              => \$opts->{unitex_dir},
     'language|l:s'          => \$opts->{language},
+    'list-languages'        => \$opts->{list_languages},
     'workers|w:i'           => \$opts->{workers_nb},
     'debug'                 => \$opts->{debug},
     'verbose|v'             => \$opts->{verbose},
@@ -90,26 +91,13 @@ debug( "Program arguments are:\n" . Dumper($opts), $debug );
 #----------------------------------------------------------------------
 pod2usage(2) if ( $opts->{help} );
 pod2usage(1) if ( $opts->{man} );
-if ( not $opts->{vocabulary} or not $opts->{output_dir} ) {
+if ( (not $opts->{vocabulary} or not $opts->{output_dir}) and not $opts->{list_languages} ) {
     print "\nMissing argument\n";
     pod2usage(2);
 }
 
 #----------------------------------------------------------------------
-# args validation
-#----------------------------------------------------------------------
-exit(1) if not _are_valid_opts($opts);
-
-#----------------------------------------------------------------------
-# unitex validation
-#----------------------------------------------------------------------
-exit(2)
-  if defined $opts->{unitex_dir}
-      and not _is_valid_unitex_installation( $opts->{unitex_dir} );
-
-#----------------------------------------------------------------------
 # first usage: config file
-# the config file must include unitex dir
 #----------------------------------------------------------------------
 my $data_dir       = File::HomeDir->my_data;           # determine data user dir
 my $patternsim_dir = $data_dir . '/' . 'patternsim';
@@ -133,7 +121,7 @@ if ( not -e $patternsimrc ) {
             'split_at_size' => 100_000, # in characters
             'temp_dir'      => "$patternsim_dir/corpus_temp",
         },
-        languages          => {
+        'languages'        => {
             'en' => {
                 'unitex_language_name' => 'English',
                 'lexical_resources'    => 'share/Resources/English/Dela/*.bin',
@@ -146,8 +134,8 @@ if ( not -e $patternsimrc ) {
    
             },
         },
-        default_language => 'en',
-        version => $VERSION,
+        'default_language' => 'en',
+        'version' => $VERSION,
     };
 
     my $config = Config::General->new($config_data);
@@ -161,6 +149,29 @@ msg( "Using configuration file '$patternsimrc'", $verbose );
 
 my $config = Config::General->new( $patternsim_dir . '/patternsimrc' );
 my %config = $config->getall();
+
+#----------------------------------------------------------------------
+# show list languages if needed
+#----------------------------------------------------------------------
+if ($opts->{list_languages}) {
+  foreach my $language_id ( keys %{$config{'languages'}} ) {
+    print $language_id . ' (' . $config{'languages'}->{$language_id}->{'unitex_language_name'} . ')' . "\n";
+  }
+  exit(0);
+}
+
+#----------------------------------------------------------------------
+# args validation
+#----------------------------------------------------------------------
+exit(1) if not _are_valid_opts($opts);
+
+#----------------------------------------------------------------------
+# unitex validation
+#----------------------------------------------------------------------
+exit(2)
+  if defined $opts->{unitex_dir}
+      and not _is_valid_unitex_installation( $opts->{unitex_dir} );
+
 
 #----------------------------------------------------------------------
 # check if configuration file is up to date
@@ -879,10 +890,16 @@ patternsim - DESCRIPTION
 
 patternsim [options] [corpus_file(s) ...]
 
-  Options:
+  Mandatory options:
     --vocabulary (-v)        input vocabulary file
     --output (-o)            output directory
     --unitex                 Unitex main directory
+
+  Options:
+    --workers (-w)           number of workers
+    --language (-l)          language
+
+    --list-languages         list all available languages
 
     --verbose                verbose mode
     --help                   brief help message
@@ -913,6 +930,14 @@ of your Unitex main directory.
 Specify the number of parallel workers
 Workers will extract in parallel semantic relations. 
 A good number of workers will be the number of CPU cores minus 1.
+
+==item --language -w I<language_id>
+
+Specify the current language
+
+==item --list-languages
+
+Show all available languages (language_id and full name)
 
 =item --output -o I<output_directory>
 
