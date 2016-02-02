@@ -91,7 +91,7 @@ debug( "Program arguments are:\n" . Dumper($opts), $debug );
 #----------------------------------------------------------------------
 pod2usage(2) if ( $opts->{help} );
 pod2usage(1) if ( $opts->{man} );
-if ( (not $opts->{vocabulary} or not $opts->{output_dir}) and not $opts->{list_languages} ) {
+if ( (not $opts->{output_dir}) and not $opts->{list_languages} ) {
     print "\nMissing argument\n";
     pod2usage(2);
 }
@@ -271,10 +271,14 @@ close $fh_corpus;
 #----------------------------------------------------------------------
 # Load vocabulary file
 #----------------------------------------------------------------------
-my $vocabulary_fh = IO::File->new( $opts->{vocabulary}, 'r' );
-binmode $vocabulary_fh, ':encoding(utf8)';
-my %vocabulary = map { $_ =~ s/\s+$//; lc($_) => 1 } <$vocabulary_fh>;
-$vocabulary_fh->close();
+my %vocabulary = ();
+
+if ( $opts->{vocabulary} ) {
+  my $vocabulary_fh = IO::File->new( $opts->{vocabulary}, 'r' );
+  binmode $vocabulary_fh, ':encoding(utf8)';
+  %vocabulary = map { $_ =~ s/\s+$//; lc($_) => 1 } <$vocabulary_fh>;
+  $vocabulary_fh->close();
+}
 
 #----------------------------------------------------------------------
 # Prepare relations extraction
@@ -791,7 +795,7 @@ sub _are_valid_opts {
     my $result = 1;
 
     # test if vocabulary file exists
-    if ( not -e $opts->{vocabulary} ) {
+    if ( $opts->{vocabulary} and not -e $opts->{vocabulary} ) {
         $result = 0;
         my $err_msg = "Invalid argument (vocabulary)\n'" . $opts->{vocabulary} . "' file does not exist";
         error( $err_msg, $error );
@@ -891,11 +895,11 @@ patternsim - DESCRIPTION
 patternsim [options] [corpus_file(s) ...]
 
   Mandatory options:
-    --vocabulary (-v)        input vocabulary file
-    --output (-o)            output directory
     --unitex                 Unitex main directory
+    --output (-o)            output directory
 
   Options:
+    --vocabulary (-v)        input vocabulary file
     --workers (-w)           number of workers
     --language (-l)          language
 
@@ -909,21 +913,20 @@ patternsim [options] [corpus_file(s) ...]
 
 =over 8
 
-=item --vocabulary --vocab -v I<vocabulary_file>
-
-Specify the UTF-8 input vocabulary file
-(one word per line)
-
 =item --unitex I<unitex_main_directory>
 
 Specify the Unitex main directory
 if you want to use your own Unitex installation
 (overwite the B<patternsim> configuration file)
 
-At first run, B<patternsim> will ask you if you want
-to install the Unitex program automatically
-or if you want to specify the location
-of your Unitex main directory.
+=item --output -o I<output_directory>
+
+Specify the output directory.
+
+=item --vocabulary --vocab -v I<vocabulary_file>
+
+Specify the UTF-8 input vocabulary file
+(one word per line)
 
 =item --workers -w I<number_of_workers>
 
@@ -938,10 +941,6 @@ Specify the current language
 ==item --list-languages
 
 Show all available languages (language_id and full name)
-
-=item --output -o I<output_directory>
-
-Specify the output directory.
 
 =item --verbose
 
