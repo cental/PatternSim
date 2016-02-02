@@ -44,7 +44,7 @@ patternsim [options] [corpus_file(s) ...]
 
 **Options**
 
-Usage:
+    Usage:
     patternsim [options] [corpus_file(s) ...]
 
       Mandatory options:
@@ -62,7 +62,8 @@ Usage:
         --help                   brief help message
         --man                    full documentation
 
-Options:
+
+    Options:
     --unitex *unitex_main_directory*
             Specify the Unitex main directory if you want to use your own
             Unitex installation (overwite the patternsim configuration file)
