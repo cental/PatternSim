@@ -15,3 +15,4 @@ requires 'Log::Message::Simple';
 requires 'Moose';
 requires 'Parallel::ForkManager';
 requires 'Pod::Usage';
+requires 'Try::Tiny';
