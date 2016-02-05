@@ -386,7 +386,7 @@ foreach my $file (@splited_files) {
           $preproc_file = $filename . "_preproc_${preproc_nb}";
         }
         my $unicorpus_tmp = $unicorpus->merge_concord($preproc_file);
-        $unicorpus->delete_snt_files();
+        $unicorpus->delete_all_files();
         $unicorpus = $unicorpus_tmp;
       }
     }
