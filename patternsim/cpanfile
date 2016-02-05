@@ -1,6 +1,6 @@
 requires 'perl', '5.18.0';
 requires 'Carp';
-requires 'Config::General';
+requires 'YAML';
 requires 'Data::Dumper';
 requires 'Encode';
 requires 'File::Basename';

@@ -13,7 +13,7 @@ use utf8;
 our $VERSION = '0.3';
 
 use Getopt::Long;
-use Config::General;
+use YAML qw();
 use Pod::Usage;
 use File::HomeDir;
 use File::Temp;
@@ -22,6 +22,7 @@ use IPC::Run3;
 use File::Spec::Functions qw(rel2abs);
 use File::Basename qw(dirname);
 use Encode;
+use Try::Tiny;
 use Data::Dumper;
 
 
@@ -138,8 +139,7 @@ if ( not -e $patternsimrc ) {
         'version' => $VERSION,
     };
 
-    my $config = Config::General->new($config_data);
-    $config->save_file($patternsimrc);
+    YAML::DumpFile($patternsimrc, $config_data);
 
     msg( "File '$patternsimrc' created", $verbose );
 }
@@ -147,8 +147,21 @@ if ( not -e $patternsimrc ) {
 
 msg( "Using configuration file '$patternsimrc'", $verbose );
 
-my $config = Config::General->new( $patternsim_dir . '/patternsimrc' );
-my %config = $config->getall();
+my $config = {};
+
+try {
+  $config = YAML::LoadFile($patternsimrc);
+}
+catch {
+  error("Your configuration file '$patternsimrc' need to be updated.\nPlease, delete the '$patternsimrc' file and restart the program",$error);
+  exit(3); 
+};
+
+my %config = %$config;
+
+
+debug( "Configuration file content:\n" . Dumper($config), $debug );
+
 
 #----------------------------------------------------------------------
 # show list languages if needed
