@@ -448,6 +448,8 @@ sub delete_snt_files {
     unlink $self->snt_file;
 }
 
+#----------------------------------------------------------------------
+#----------------------------------------------------------------------
 sub delete_all_files {
     my $self = shift;
     $self->delete_snt_files;

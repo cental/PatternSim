@@ -364,9 +364,12 @@ foreach my $file (@splited_files) {
     my $unicorpus = $unitex->corpus( 'filename' => $filename );
 
     if ( $opts->{ preproc } and exists $config{languages}->{ $opts->{language} }->{preproc_fst2_graphs}) {
+      my $preproc_nb = 0;
       foreach my $preproc_fst2 (@{ $config{languages}->{ $opts->{language} }->{preproc_fst2_graphs}  }) {
         msg("applying preproc graph '$preproc_fst2'",$verbose);
-
+       
+        $preproc_nb++;  
+      
         $unicorpus->normalize;
         $unicorpus->apply_graph_in_merge_mode;
         $unicorpus->apply_graph_in_replace_mode;
@@ -375,18 +378,21 @@ foreach my $file (@splited_files) {
         $unicorpus->apply_lexical_ressources( \@lexical_resources );
         $unicorpus->apply_graph( $script_dir . $preproc_fst2 );
 
-        my $ner_file;
-        if ($file =~ /\.[^.]+$/) {
-          ($ner_file = $file) =~ s/^(.+)(\.[^.]+)$/$1_ner$2/;
+        my $preproc_file;
+        if ($filename =~ /\.[^.]+$/) {
+          ($preproc_file = $filename) =~ s/^(.+)(\.[^.]+)$/$1_preproc_${preproc_nb}$2/;
         }
         else {
-          $ner_file = $file . "_ner";
+          $preproc_file = $filename . "_preproc_${preproc_nb}";
         }
-        $unicorpus->merge_concord($ner_file);
+        my $unicorpus_tmp = $unicorpus->merge_concord($preproc_file);
+        $unicorpus->delete_snt_files();
+        $unicorpus = $unicorpus_tmp;
       }
     }
    
-    my $unicorpus = $unitex->corpus( 'filename' => $filename );
+    msg("applying main graph '" . $config{languages}->{ $opts->{language} }->{main_fst2_graph} . "'" ,$verbose);
+  # my $unicorpus = $unitex->corpus( 'filename' => $filename );
     $unicorpus->normalize;
     $unicorpus->apply_graph_in_merge_mode;
     $unicorpus->apply_graph_in_replace_mode;
