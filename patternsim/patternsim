@@ -64,6 +64,7 @@ my $result = GetOptions(
     'vocabulary|vocab|v=s'  => \$opts->{vocabulary},
     'output-dir|output|o=s' => \$opts->{output_dir},
     'unitex=s'              => \$opts->{unitex_dir},
+    'preproc'               => \$opts->{preproc},
     'language|l:s'          => \$opts->{language},
     'list-languages'        => \$opts->{list_languages},
     'workers|w:i'           => \$opts->{workers_nb},
@@ -126,6 +127,7 @@ if ( not -e $patternsimrc ) {
             'en' => {
                 'unitex_language_name' => 'English',
                 'lexical_resources'    => 'share/Resources/English/Dela/*.bin',
+                'preproc_fst2_graphs'  => ['share/Resources/English/Graphs/ner/named_entities.fst2'],
                 'main_fst2_graph'      => 'share/Resources/English/Graphs/hypernymy/hypernym_main.fst2',
             },
             'ru' => {
@@ -357,8 +359,34 @@ msg( "To process: #$nb_files_to_process files", $verbose );
 
 foreach my $file (@splited_files) {
     $pm->start and next;
-    
-    my $unicorpus = $unitex->corpus( 'filename' => $file );
+ 
+    my $filename = $file;
+    my $unicorpus = $unitex->corpus( 'filename' => $filename );
+
+    if ( $opts->{ preproc } and exists $config{languages}->{ $opts->{language} }->{preproc_fst2_graphs}) {
+      foreach my $preproc_fst2 (@{ $config{languages}->{ $opts->{language} }->{preproc_fst2_graphs}  }) {
+        msg("applying preproc graph '$preproc_fst2'",$verbose);
+
+        $unicorpus->normalize;
+        $unicorpus->apply_graph_in_merge_mode;
+        $unicorpus->apply_graph_in_replace_mode;
+        $unicorpus->tokenize;
+        my @lexical_resources = glob( $script_dir . $config{languages}->{ $opts->{language} }->{lexical_resources} );
+        $unicorpus->apply_lexical_ressources( \@lexical_resources );
+        $unicorpus->apply_graph( $script_dir . $preproc_fst2 );
+
+        my $ner_file;
+        if ($file =~ /\.[^.]+$/) {
+          ($ner_file = $file) =~ s/^(.+)(\.[^.]+)$/$1_ner$2/;
+        }
+        else {
+          $ner_file = $file . "_ner";
+        }
+        $unicorpus->merge_concord($ner_file);
+      }
+    }
+   
+    my $unicorpus = $unitex->corpus( 'filename' => $filename );
     $unicorpus->normalize;
     $unicorpus->apply_graph_in_merge_mode;
     $unicorpus->apply_graph_in_replace_mode;

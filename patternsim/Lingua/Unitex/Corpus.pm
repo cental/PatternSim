@@ -337,8 +337,7 @@ sub apply_graph {
 
 sub merge_concord {
     my $self = shift;
-    my $filename =
-      shift;    # TODO: if no filename is provided, generate a filename;
+    my $filename = shift;    # TODO: if no filename is provided, generate a filename;
 
     my $result = undef;
 
