@@ -366,6 +366,7 @@ foreach my $file (@splited_files) {
     if ( $opts->{ preproc } and exists $config{languages}->{ $opts->{language} }->{preproc_fst2_graphs}) {
       my $preproc_nb = 0;
       foreach my $preproc_fst2 (@{ $config{languages}->{ $opts->{language} }->{preproc_fst2_graphs}  }) {
+    
         msg("applying preproc graph '$preproc_fst2'",$verbose);
        
         $preproc_nb++;  
@@ -392,7 +393,7 @@ foreach my $file (@splited_files) {
     }
    
     msg("applying main graph '" . $config{languages}->{ $opts->{language} }->{main_fst2_graph} . "'" ,$verbose);
-  # my $unicorpus = $unitex->corpus( 'filename' => $filename );
+    
     $unicorpus->normalize;
     $unicorpus->apply_graph_in_merge_mode;
     $unicorpus->apply_graph_in_replace_mode;
