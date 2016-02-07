@@ -137,6 +137,12 @@ if ( not -e $patternsimrc ) {
                 'lexical_resources'    => 'share/Resources/French/Dela/*.bin',
                 'main_fst2_graph'      => 'share/Resources/French/Graphs/hypernymy/hypernym_main.fst2',
             },
+           'pt' => {
+                'unitex_language_name' => 'Portuguese',
+                'lexical_resources'    => 'share/Resources/Portuguese/Dela/*.bin',
+                'main_fst2_graph'      => 'share/Resources/Portuguese/Graphs/hypernymy/hypernym_main.fst2',
+            },
+
             'ru' => {
                 'unitex_language_name' => 'Russian',
                 'lexical_resources'    => 'share/Resources/Russian/Dela/*.bin',

@@ -1,0 +1,51 @@
+------------------------------------------------------------------------
+r3717 | friburger | 2014-12-01 14:18:27 +0100 (Mon, 01 Dec 2014) | 1 line
+
+Changes in the norm.txt file: adding a mapping between special spaces (quadratins and others) and normal space to normalize the text.
+------------------------------------------------------------------------
+r3343 | friburger | 2012-09-27 13:26:00 +0200 (Thu, 27 Sep 2012) | 1 line
+
+Added a share folder each Cassys language folder
+------------------------------------------------------------------------
+r3175 | paumier | 2012-07-24 12:53:08 +0200 (Tue, 24 Jul 2012) | 1 line
+
+Adding Gramlab's TEI graphs to every language directory
+------------------------------------------------------------------------
+r3002 | paumier | 2012-05-23 09:15:12 +0200 (Wed, 23 May 2012) | 1 line
+
+Adding verb inflection .fst2 for Portuguese (Brazil)
+------------------------------------------------------------------------
+r2710 | paumier | 2012-01-16 16:52:04 +0100 (Mon, 16 Jan 2012) | 1 line
+
+Updating inflection graphs for Portuguese (Brazil)
+------------------------------------------------------------------------
+r2465 | paumier | 2011-08-01 13:40:15 +0200 (Mon, 01 Aug 2011) | 1 line
+
+Updating Sentence grammar for Portuguese (Brazil and Portugal)
+------------------------------------------------------------------------
+r2050 | friburger | 2010-12-21 11:42:52 +0100 (Tue, 21 Dec 2010) | 1 line
+
+Creating the folders named Cassys (for each language) for the Cassys System
+------------------------------------------------------------------------
+r631 | paumier | 2009-03-03 11:22:27 +0100 (Tue, 03 Mar 2009) | 1 line
+
+Bug fix on V076.fst2 by Eric Laporte
+------------------------------------------------------------------------
+r532 | agata | 2008-10-22 09:20:54 +0200 (Wed, 22 Oct 2008) | 1 line
+
+Portuguese ressources for a sample DELAC inflection
+------------------------------------------------------------------------
+r178 | paumier | 2006-11-15 08:44:29 +0100 (Wed, 15 Nov 2006) | 3 lines
+
+Adding for each language a file named Norm.txt that
+defines replacement rules to be used by the new
+version of the Normalize program
+------------------------------------------------------------------------
+r104 | paumier | 2006-09-13 11:33:05 +0200 (Wed, 13 Sep 2006) | 1 line
+
+Adding inflection graphs for Portuguese of Brazil
+------------------------------------------------------------------------
+r103 | paumier | 2006-09-13 11:01:15 +0200 (Wed, 13 Sep 2006) | 1 line
+
+Adding resources for Portuguese of Brazil
+------------------------------------------------------------------------
