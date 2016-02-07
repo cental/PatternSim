@@ -16,7 +16,9 @@ use Getopt::Long;
 use YAML qw();
 use Pod::Usage;
 use File::HomeDir;
+use File::Path;
 use File::Temp;
+use UUID::Tiny;
 use Parallel::ForkManager;
 use IPC::Run3;
 use File::Spec::Functions qw(rel2abs);
@@ -196,6 +198,13 @@ if (not exists $config{version} or $config{version} ne $VERSION ) {
   error("Your configuration file '$patternsimrc' need to be updated\n(actual version: $old_config_file - expected version : $VERSION)\nPlease, delete the '$patternsimrc' file and restart the program",$error);
   exit(3); 
 }
+
+#----------------------------------------------------------------------
+# set temporary directories
+#----------------------------------------------------------------------
+my $session_dir = UUID::Tiny::create_uuid_as_string(UUID::Tiny::UUID_V1);
+$config{corpora}->{temp_dir}          = $config{corpora}->{temp_dir} . '/' . $session_dir;
+$config{parallel_manager}->{temp_dir} = $config{corpora}->{temp_dir} . '/' . $session_dir;
 
 msg("Storing temporary files in '". $config{corpora}->{temp_dir} ."'",$verbose);
 msg("Storing workers results in '". $config{parallel_manager}->{temp_dir} ."'",$verbose);
