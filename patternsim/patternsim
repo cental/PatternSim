@@ -9,6 +9,7 @@
 use strict;
 use warnings;
 use utf8;
+use sigtrap 'handler' => \&signal_handler, 'normal-signals';
 
 our $VERSION = '0.3';
 
@@ -26,7 +27,6 @@ use File::Basename qw(dirname);
 use Encode;
 use Try::Tiny;
 use Data::Dumper;
-
 
 
 # Log facility
@@ -106,7 +106,7 @@ if ( (not $opts->{output_dir}) and not $opts->{list_languages} ) {
 my $data_dir       = File::HomeDir->my_data;           # determine data user dir
 my $patternsim_dir = $data_dir . '/' . 'patternsim';
 if ( not -e $patternsim_dir ) {
-    mkdir $patternsim_dir;
+    File::Path::make_path($patternsim_dir);
     debug( "Directory '$patternsim_dir' created", $debug );
     msg( "Directory '$patternsim_dir' created", $verbose );
 }
@@ -253,7 +253,7 @@ my $unitex = Lingua::Unitex->new(
 #----------------------------------------------------------------------
 my @splited_files = ();
 
-mkdir $config{corpora}->{temp_dir} if not -e $config{corpora}->{temp_dir};
+File::Path::make_path($config{corpora}->{temp_dir}) if not -e $config{corpora}->{temp_dir};
 
 my $pattern = 'corpus_XXXXXXXXXXXXXXXX';
 my $suffix  = '_utf16le.txt';
@@ -325,7 +325,7 @@ my $workers_nb  = $opts->{workers_nb};
 my $workers_ttl = $config{'parallel_manager'}->{'workers_time_to_live'};
 
 
-mkdir $config{parallel_manager}->{temp_dir} if not -e $config{parallel_manager}->{temp_dir};
+File::Path::make_path($config{parallel_manager}->{temp_dir}) if not -e $config{parallel_manager}->{temp_dir};
 
 my $pm = Parallel::ForkManager->new( $workers_nb, $temp_dir );
 
@@ -351,6 +351,12 @@ $pm->run_on_finish(    # called BEFORE the first call to start()
         my ( $pid, $exit_code, $ident, $exit_signal, $core_dump,
             $data_structure_reference ) = @_;
         delete $workers{$pid};
+
+        # a finish signal was sent to the parallel manager
+        if ( $exit_code == 100 ) {
+          return;
+        }
+
         $nb_files_processed++;
         msg( '['. localtime . "] Processed: #$nb_files_processed / $nb_files_to_process files", $verbose );
 	if (defined($data_structure_reference)) {
@@ -803,6 +809,14 @@ foreach my $lemma (
 
 $conc_freq_fh->close;
 
+
+#----------------------------------------------------------------------
+# remove temp directories
+#----------------------------------------------------------------------
+File::Path::remove_tree($config{corpora}->{temp_dir});
+File::Path::remove_tree($config{parallel_manager}->{temp_dir});
+
+
 #======================================================================
 # ROUTINE _lemmatize
 # Get a list of words
@@ -934,12 +948,42 @@ sub _is_valid_unitex_installation {
     return $result;
 }
 
+#======================================================================
+# ROUTINE trim
+#======================================================================
 sub trim {
     for ( my $i = 0 ; $i < @_ ; $i++ ) {
         $_[$i] =~ s/^\s+//;
         $_[$i] =~ s/\s+$//;
     }
 }
+
+#======================================================================
+# ROUTINE signal_handler
+#======================================================================
+sub signal_handler {
+  my $signal = shift;
+  msg("program stopped using the $signal signal", $error);
+
+  # stop parallel manager
+  if ( defined  $pm) {
+    $pm->finish(100);
+  }
+
+  # remove temporary corpora files
+  if (%config and $config{corpora} and $config{corpora}->{temp_dir} ) {
+    msg("removing directory '" . $config{corpora}->{temp_dir} . "'", $verbose);
+    File::Path::remove_tree($config{corpora}->{temp_dir});
+  }
+
+  # remove temprary parallel manager files
+  if (%config and $config{parallel_manager} and $config{parallel_manager}->{temp_dir}) {
+    msg("removing directory '" . $config{parallel_manager}->{temp_dir} . "'", $verbose);
+    File::Path::remove_tree($config{parallel_manager}->{temp_dir});
+  }
+  exit(100);
+}
+
 
 __DATA__
 
