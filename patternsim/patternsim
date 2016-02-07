@@ -464,6 +464,13 @@ foreach my $conc (@concord) {
 
     print $concord_fh $conc, "\n";
 
+    #----------------------------------------------------------------------
+    # remove named entities tags
+    #----------------------------------------------------------------------
+    $conc =~ s/\[#[A-Z]+=[A-Z0-9]+\]//; # remove NE added info tags
+    do { $conc =~ s/\[([^\[\]]+)#[A-Z]+\]/$1/g } while ($conc =~ /\[[^\[\]]+#[A-Z]+\]/);
+    $conc =~ s/\{([^{}]+),\..+?\}/$1/g;
+
     my @concord_relations = ();
 
     #     print "CONC: $conc\n";
