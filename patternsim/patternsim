@@ -132,11 +132,15 @@ if ( not -e $patternsimrc ) {
                 'preproc_fst2_graphs'  => ['share/Resources/English/Graphs/ner/named_entities.fst2'],
                 'main_fst2_graph'      => 'share/Resources/English/Graphs/hypernymy/hypernym_main.fst2',
             },
+            'fr' => {
+                'unitex_language_name' => 'French',
+                'lexical_resources'    => 'share/Resources/French/Dela/*.bin',
+                'main_fst2_graph'      => 'share/Resources/French/Graphs/hypernymy/hypernym_main.fst2',
+            },
             'ru' => {
                 'unitex_language_name' => 'Russian',
                 'lexical_resources'    => 'share/Resources/Russian/Dela/*.bin',
                 'main_fst2_graph'      => 'share/Resources/Russian/Graphs/hypernymy/hypernym_main.fst2',
-   
             },
         },
         'default_language' => 'en',

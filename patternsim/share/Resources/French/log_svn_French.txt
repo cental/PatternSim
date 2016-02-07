@@ -1,0 +1,162 @@
+------------------------------------------------------------------------
+r3178 | paumier | 2012-07-24 13:19:07 +0200 (Tue, 24 Jul 2012) | 1 line
+
+
+------------------------------------------------------------------------
+r3175 | paumier | 2012-07-24 12:53:08 +0200 (Tue, 24 Jul 2012) | 1 line
+
+Adding Gramlab's TEI graphs to every language directory
+------------------------------------------------------------------------
+r2765 | adurand | 2012-02-29 12:38:38 +0100 (Wed, 29 Feb 2012) | 1 line
+
+Changes on graph for sequence segmentation inserting {STOP} instead of {S} between sequences
+------------------------------------------------------------------------
+r2714 | adurand | 2012-01-16 21:22:21 +0100 (Mon, 16 Jan 2012) | 1 line
+
+Replace Graphs for sequences extraction in TEILite preprocessing 
+------------------------------------------------------------------------
+r2696 | adurand | 2012-01-10 12:21:52 +0100 (Tue, 10 Jan 2012) | 1 line
+
+Sequence Graphs for TEI and TXT preprocessing
+------------------------------------------------------------------------
+r2411 | paumier | 2011-06-14 07:33:22 +0200 (Tue, 14 Jun 2011) | 1 line
+
+Adding a new dictionary graph that turns numbers in letters into numeral values
+------------------------------------------------------------------------
+r2161 | friburger | 2011-02-16 20:08:27 +0100 (Wed, 16 Feb 2011) | 1 line
+
+Add of the lines A?\195?\128, A?\195?\130, A?\195?\132, C?\195?\135, E?\195?\137 etc. to allow that a word in a dictionary with an accented capital letter (ex: ?\195?\137thiopie) can be recognized if found without the accented letter (ex: Ethiopie) in a text.
+------------------------------------------------------------------------
+r2118 | gvollant | 2011-02-09 18:04:06 +0100 (Wed, 09 Feb 2011) | 1 line
+
+revert revision 2115 and 2116
+------------------------------------------------------------------------
+r2116 | friburger | 2011-02-09 11:50:29 +0100 (Wed, 09 Feb 2011) | 1 line
+
+Add of equivalence between accented upper case letters and upper case letters without accents : ex : ?\195?\136E
+------------------------------------------------------------------------
+r2115 | friburger | 2011-02-09 11:50:17 +0100 (Wed, 09 Feb 2011) | 1 line
+
+Add of equivalence between accented upper case letters and upper case letters without accents : ex : ?\195?\136E
+------------------------------------------------------------------------
+r2114 | paumier | 2011-02-08 16:03:41 +0100 (Tue, 08 Feb 2011) | 1 line
+
+Bug fix a subgraph of Sentence.grf
+------------------------------------------------------------------------
+r2110 | paumier | 2011-02-04 16:44:47 +0100 (Fri, 04 Feb 2011) | 1 line
+
+Bug fix a subgraph of Sentence.grf
+------------------------------------------------------------------------
+r2106 | sigogne | 2011-01-27 21:23:50 +0100 (Thu, 27 Jan 2011) | 1 line
+
+Update of tagger data files.
+------------------------------------------------------------------------
+r2099 | sigogne | 2011-01-25 09:30:34 +0100 (Tue, 25 Jan 2011) | 1 line
+
+Update of tagger data files.
+------------------------------------------------------------------------
+r2050 | friburger | 2010-12-21 11:42:52 +0100 (Tue, 21 Dec 2010) | 1 line
+
+Creating the folders named Cassys (for each language) for the Cassys System
+------------------------------------------------------------------------
+r1996 | sigogne | 2010-12-10 11:22:57 +0100 (Fri, 10 Dec 2010) | 1 line
+
+Update of Tagger data files.
+------------------------------------------------------------------------
+r1939 | sigogne | 2010-11-22 11:17:41 +0100 (Mon, 22 Nov 2010) | 1 line
+
+Tagger : rename tagger data files ("inflected" -> "morph", "raw" -> "cat").
+------------------------------------------------------------------------
+r1931 | sigogne | 2010-11-17 15:21:22 +0100 (Wed, 17 Nov 2010) | 1 line
+
+Tagger : remove old tagger data files (replaced in previous version).
+------------------------------------------------------------------------
+r1925 | sigogne | 2010-11-14 23:33:29 +0100 (Sun, 14 Nov 2010) | 1 line
+
+Tagger: Add tagger data files trained on Paris7 TreeBank.
+------------------------------------------------------------------------
+r1326 | paumier | 2010-03-25 15:02:19 +0100 (Thu, 25 Mar 2010) | 1 line
+
+Adding French dictionaries for Anthony Sigogne's tagger
+------------------------------------------------------------------------
+r1139 | paumier | 2009-11-12 13:33:31 +0100 (Thu, 12 Nov 2009) | 1 line
+
+The updated tagset.def was the wrong one
+------------------------------------------------------------------------
+r1138 | paumier | 2009-11-12 13:31:34 +0100 (Thu, 12 Nov 2009) | 1 line
+
+Updates from Eric Laporte
+------------------------------------------------------------------------
+r750 | paumier | 2009-04-22 12:24:03 +0200 (Wed, 22 Apr 2009) | 1 line
+
+Bug fix in the French dictionary graph Dnum
+------------------------------------------------------------------------
+r628 | paumier | 2009-01-29 15:22:08 +0100 (Thu, 29 Jan 2009) | 1 line
+
+Bug fix in French main dictionary
+------------------------------------------------------------------------
+r625 | paumier | 2009-01-28 10:44:02 +0100 (Wed, 28 Jan 2009) | 1 line
+
+Bug fix in motsGramf- dictionary
+------------------------------------------------------------------------
+r624 | paumier | 2009-01-20 09:21:43 +0100 (Tue, 20 Jan 2009) | 1 line
+
+Update of French/Graphs/Normalization/PostElisions.grf
+------------------------------------------------------------------------
+r575 | paumier | 2008-11-24 10:24:38 +0100 (Mon, 24 Nov 2008) | 1 line
+
+French Sentence.grf: removing (...)  and [...] loops
+------------------------------------------------------------------------
+r529 | agata | 2008-10-22 09:12:37 +0200 (Wed, 22 Oct 2008) | 1 line
+
+French ressources for a sample DELAC inflection
+------------------------------------------------------------------------
+r502 | paumier | 2008-09-26 15:23:25 +0200 (Fri, 26 Sep 2008) | 1 line
+
+Bug fix in motsGramm-.bin
+------------------------------------------------------------------------
+r273 | paumier | 2007-04-06 10:06:08 +0200 (Fri, 06 Apr 2007) | 2 lines
+
+Replacing the previous DELAF with the clean one that can
+be downloaded in a text version at http://infolingu.univ-mlv.fr
+------------------------------------------------------------------------
+r257 | paumier | 2007-03-21 09:52:30 +0100 (Wed, 21 Mar 2007) | 1 line
+
+Bug fix in the Sentence grammar
+------------------------------------------------------------------------
+r178 | paumier | 2006-11-15 08:44:29 +0100 (Wed, 15 Nov 2006) | 3 lines
+
+Adding for each language a file named Norm.txt that
+defines replacement rules to be used by the new
+version of the Normalize program
+------------------------------------------------------------------------
+r173 | paumier | 2006-11-07 16:55:23 +0100 (Tue, 07 Nov 2006) | 2 lines
+
+Restoring a valid Alphabet file that was a big-endian
+one for an unknown reason.
+------------------------------------------------------------------------
+r167 | paumier | 2006-11-06 17:08:37 +0100 (Mon, 06 Nov 2006) | 1 line
+
+Putting new Elag directory with no accent error
+------------------------------------------------------------------------
+r166 | paumier | 2006-11-06 17:03:53 +0100 (Mon, 06 Nov 2006) | 1 line
+
+Removing Elag directory that contained file names with accents
+------------------------------------------------------------------------
+r158 | paumier | 2006-11-02 09:06:08 +0100 (Thu, 02 Nov 2006) | 2 lines
+
+Adding resource files and sample files
+for compound word inflection in French
+------------------------------------------------------------------------
+r87 | paumier | 2006-08-31 15:12:43 +0200 (Thu, 31 Aug 2006) | 1 line
+
+this is a test
+------------------------------------------------------------------------
+r86 | paumier | 2006-08-31 14:59:49 +0200 (Thu, 31 Aug 2006) | 1 line
+
+
+------------------------------------------------------------------------
+r85 | wastl | 2006-08-31 14:22:47 +0200 (Thu, 31 Aug 2006) | 1 line
+
+added dir for linguistic resources: French
+------------------------------------------------------------------------
