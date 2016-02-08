@@ -412,44 +412,56 @@ foreach my $file (@splited_files) {
     
         msg("applying preproc graph '$preproc_fst2'",$verbose);
        
-        $preproc_nb++;  
-      
-        $unicorpus->normalize;
-        $unicorpus->apply_graph_in_merge_mode;
-        $unicorpus->apply_graph_in_replace_mode;
-        $unicorpus->tokenize;
-        my @lexical_resources = glob( $script_dir . $config{languages}->{ $opts->{language} }->{lexical_resources} );
-        $unicorpus->apply_lexical_ressources( \@lexical_resources );
-        $unicorpus->apply_graph( $script_dir . $preproc_fst2 );
+        $preproc_nb++;
 
-        my $preproc_file;
-        if ($filename =~ /\.[^.]+$/) {
-          ($preproc_file = $filename) =~ s/^(.+)(\.[^.]+)$/$1_preproc_${preproc_nb}$2/;
+        my $error_code = 0; 
+      
+        ($error_code) = $unicorpus->normalize if defined $error_code;
+        ($error_code) = $unicorpus->apply_graph_in_merge_mode if defined $error_code;
+        ($error_code) = $unicorpus->apply_graph_in_replace_mode if defined $error_code;
+        ($error_code) = $unicorpus->tokenize if defined $error_code;
+        my @lexical_resources = glob( $script_dir . $config{languages}->{ $opts->{language} }->{lexical_resources} );
+        ($error_code) = $unicorpus->apply_lexical_ressources( \@lexical_resources ) if defined $error_code;
+        ($error_code) = $unicorpus->apply_graph( $script_dir . $preproc_fst2 ) if defined $error_code;
+
+        if ( defined $error_code ) {
+          my $preproc_file;
+          if ($filename =~ /\.[^.]+$/) {
+            ($preproc_file = $filename) =~ s/^(.+)(\.[^.]+)$/$1_preproc_${preproc_nb}$2/;
+          }
+          else {
+            $preproc_file = $filename . "_preproc_${preproc_nb}";
+          }
+          my $unicorpus_tmp = $unicorpus->merge_concord($preproc_file);
+          $unicorpus->delete_all_files();
+          $unicorpus = $unicorpus_tmp;
         }
         else {
-          $preproc_file = $filename . "_preproc_${preproc_nb}";
+          error("an error has occurred during the corpus preprocessing ('$preproc_fst2') --- preprocessing skipped ", $error);
         }
-        my $unicorpus_tmp = $unicorpus->merge_concord($preproc_file);
-        $unicorpus->delete_all_files();
-        $unicorpus = $unicorpus_tmp;
       }
     }
    
     msg("applying main graph '" . $config{languages}->{ $opts->{language} }->{main_fst2_graph} . "'" ,$verbose);
-    
-    $unicorpus->normalize;
-    $unicorpus->apply_graph_in_merge_mode;
-    $unicorpus->apply_graph_in_replace_mode;
-    $unicorpus->tokenize;
+
+    my $error_code = 0;   
+ 
+    ($error_code) = $unicorpus->normalize if defined $error_code;
+    ($error_code) = $unicorpus->apply_graph_in_merge_mode if defined $error_code;
+    ($error_code) = $unicorpus->apply_graph_in_replace_mode if defined $error_code;
+    ($error_code) = $unicorpus->tokenize if defined $error_code;
     
     my @lexical_resources = glob( $script_dir . $config{languages}->{ $opts->{language} }->{lexical_resources} );
     
-    $unicorpus->apply_lexical_ressources( \@lexical_resources );
-    my $res = $unicorpus->apply_graph( $script_dir . $config{languages}->{ $opts->{language} }->{main_fst2_graph} );
+    ($error_code)  = $unicorpus->apply_lexical_ressources( \@lexical_resources ) if defined $error_code;
+    ($error_code) = $unicorpus->apply_graph( $script_dir . $config{languages}->{ $opts->{language} }->{main_fst2_graph} ) if defined $error_code;
 
-     $pm->finish(1) if not defined $res;
-     
-     my $dico = $unicorpus->get_dictionary();
+    if ( not defined $error_code ) {
+      error("an error has occurred during the corpus processing  --- processing skipped ", $error);
+      $pm->finish(1) ; 
+    }
+
+    my $dico = $unicorpus->get_dictionary();
 
     #$dico->merge_with( $unicorpus->get_dictionary() );
     my @concord        = $unicorpus->get_last_concord();
