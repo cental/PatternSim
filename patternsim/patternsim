@@ -11,7 +11,7 @@ use warnings;
 use utf8;
 use sigtrap 'handler' => \&signal_handler, 'normal-signals';
 
-our $VERSION = '0.3';
+our $VERSION = '0.3.1';
 
 use Getopt::Long;
 use YAML qw();
@@ -63,17 +63,18 @@ my $script_dir  = dirname($script_path) . '/';
 #----------------------------------------------------------------------
 my $opts   = {};
 my $result = GetOptions(
-    'vocabulary|vocab|v=s'  => \$opts->{vocabulary},
-    'output-dir|output|o=s' => \$opts->{output_dir},
-    'unitex=s'              => \$opts->{unitex_dir},
-    'preproc'               => \$opts->{preproc},
-    'language|l:s'          => \$opts->{language},
-    'list-languages'        => \$opts->{list_languages},
-    'workers|w:i'           => \$opts->{workers_nb},
-    'debug'                 => \$opts->{debug},
-    'verbose|v'             => \$opts->{verbose},
-    'help|h'                => \$opts->{help},
-    'man'                   => \$opts->{man},
+    'vocabulary|vocab|v=s'       => \$opts->{vocabulary},
+    'output-dir|output|o=s'      => \$opts->{output_dir},
+    'unitex=s'                   => \$opts->{unitex_dir},
+    'preproc'                    => \$opts->{preproc},
+    'unitex-memory-limit:i'      => \$opts->{unitex_memory_limit},
+    'language|l:s'               => \$opts->{language},
+    'list-languages'             => \$opts->{list_languages},
+    'workers|w:i'                => \$opts->{workers_nb},
+    'debug'                      => \$opts->{debug},
+    'verbose|v'                  => \$opts->{verbose},
+    'help|h'                     => \$opts->{help},
+    'man'                        => \$opts->{man},
 );
 
 $opts->{corpora} = [@ARGV];
@@ -115,7 +116,11 @@ my $patternsimrc = "$patternsim_dir/patternsimrc";
 if ( not -e $patternsimrc ) {
 
     my $config_data = {
-        'unitex'           => { unitex_dir => undef, user_dir => undef },
+        'unitex'           => { 
+          memory_limit => 0,  # max memory usage in kbytes (like `ulimit`)
+                                   # 0 for unlimited
+                                   # (does not work under Windows)
+        },
         'parallel_manager' => {
           'workers_nb'            => 2,
           'temp_dir'              => "$patternsim_dir/parallel_temp",
@@ -172,6 +177,7 @@ catch {
 };
 
 my %config = %$config;
+
 
 
 debug( "Configuration file content:\n" . Dumper($config), $debug );
@@ -243,6 +249,17 @@ if ( not $opts->{workers_nb} ) {
 }
 msg("Number of workers: " . $opts->{workers_nb}, $verbose);
 
+#----------------------------------------------------------------------
+# overwrite Unitex memory limit from config
+#----------------------------------------------------------------------
+if ( not $opts->{unitex_memory_limit} ) {
+  $opts->{unitex_memory_limit} = $config{unitex}->{memory_limit};
+}
+
+# set Unitex memory_limit at 0 if OS is Windows
+$opts->{unitex_memory_limit} = 0 if $os eq "Win";
+
+msg("Unitex memory limit: " . $opts->{unitex_memory_limit}, $verbose);
 
 
 #----------------------------------------------------------------------
@@ -250,11 +267,12 @@ msg("Number of workers: " . $opts->{workers_nb}, $verbose);
 #----------------------------------------------------------------------
 
 my $unitex = Lingua::Unitex->new(
-    language    => $config{languages}->{ $opts->{language} }->{unitex_language_name},
-    unitex_dir  => $opts->{unitex_dir},
-    verbose_log => $verbose,
-    debug_log   => $debug,
-    error_log   => $error,
+    language          => $config{languages}->{ $opts->{language} }->{unitex_language_name},
+    unitex_dir        => $opts->{unitex_dir},
+    memory_limit      => $opts->{unitex_memory_limit},
+    verbose_log       => $verbose,
+    debug_log         => $debug,
+    error_log         => $error,
 );
 
 #----------------------------------------------------------------------

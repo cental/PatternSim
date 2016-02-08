@@ -15,8 +15,10 @@ use Data::Dumper;
 
 use Lingua::Unitex::Corpus;
 
-has 'unitex_dir' => ( is => 'ro', isa => 'Str' )
-  ;    # TODO: contrôler que le Unitex_dir existe et est valable
+has 'unitex_dir'   => ( is => 'ro', isa => 'Str' );    # TODO: contrôler que le Unitex_dir existe et est valable
+
+has 'memory_limit' => ( is => 'ro', isa => 'Int', default => 0 ); # memory limit in kbytes (like `ulimit`) - 0 for unlimited
+
 has 'language' => ( is => 'ro', isa => 'Str' );
 has 'os' => ( is => 'ro', isa => 'Str', builder => '_get_os' );
 has 'user_dir' => (
@@ -92,7 +94,17 @@ sub corpus {
 sub _toollogger {
     my $self    = shift;
     my @args    = @_;
-    my $command = [ $self->toollogger_exe, @args ];
+
+    my $command;
+    
+    if ( $self->memory_limit != 0 ) {
+      my $arguments = join (" ", map { '"' . $_ . '"'} @args);
+      my $main_command = 'ulimit -v ' . $self->memory_limit . ' ; ' . $self->toollogger_exe . ' ' . $arguments;
+      $command = [ 'bash', '-c', $main_command, ];
+    }
+    else {
+     $command = [ $self->toollogger_exe, @args ];
+    }
 
     my ( $out, $err );
     debug( "EXECUTE: " . join( " ", @$command ), $self->debug_log );
