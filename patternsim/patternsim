@@ -11,7 +11,7 @@ use warnings;
 use utf8;
 use sigtrap 'handler' => \&signal_handler, 'normal-signals';
 
-our $VERSION = '0.3.1';
+our $VERSION = '0.3.1.1';
 
 use Getopt::Long;
 use YAML qw();
@@ -127,7 +127,7 @@ if ( not -e $patternsimrc ) {
           'workers_time_to_live'  => 600, # worker will be killed after this time (in seconds)
         },
         'corpora'          => {
-            'split_at_size' => 100_000, # in characters
+            'split_at_size' => 1_000_000, # in characters
             'temp_dir'      => "$patternsim_dir/corpus_temp",
         },
         'languages'        => {
